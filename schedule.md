@@ -456,7 +456,7 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 - If only `week` is provided without `year`, the current year is used
 - Valid years range from 2023 to the current year
 - Specific week schedules are cached for 30 minutes
-- Latest schedule is cached for 5 minutes
+- Latest schedule is cached for 1 minute
 - Search responses are cached for 30 seconds
 - `/schedule/weeks` is public and returns available week numbers grouped by year
 - Schedule data is globally cached for a minimum of 6 hours, so changed schedules are not immediately available
