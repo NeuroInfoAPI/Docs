@@ -43,6 +43,11 @@ export class NeuroInfoApiClient {
          */
         this.getLatestSchedule = () => this.request("/schedule/latest");
         /**
+         * Fetches available schedule week numbers grouped by year.
+         * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#schedule-weeks-index-1
+         */
+        this.getScheduleWeeks = () => this.request("/schedule/weeks");
+        /**
          * Searches schedule entries by message text with optional filters and cursor pagination.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#search-weekly-schedules
          */
@@ -70,11 +75,6 @@ export class NeuroInfoApiClient {
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/subathon.md#subathon-data-specific-year-1
          */
         this.getSubathon = (year) => this.request("/subathon", { year });
-        /**
-         * Fetches the years for which subathon data is available.
-         * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/subathon.md#subathon-years-1
-         */
-        this.getSubathonYears = () => this.request("/subathon/years");
         this.apiInstance = axios.create({
             baseURL: `https://${baseDomain}/api/v1`,
             timeout: 10000,
@@ -113,6 +113,9 @@ export class NeuroInfoApiClient {
         catch (error) {
             return { data: null, error: this.parseError(error) };
         }
+    }
+    getSubathonYears(detailed = false) {
+        return this.request("/subathon/years", detailed ? { detailed: true } : undefined);
     }
 }
 /**

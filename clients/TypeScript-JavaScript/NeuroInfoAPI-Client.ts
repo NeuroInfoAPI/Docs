@@ -101,6 +101,12 @@ export class NeuroInfoApiClient {
   public getLatestSchedule = () => this.request<ScheduleLatestResponse>("/schedule/latest");
 
   /**
+   * Fetches available schedule week numbers grouped by year.
+   * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#schedule-weeks-index-1
+   */
+  public getScheduleWeeks = () => this.request<ScheduleWeeksResponse>("/schedule/weeks");
+
+  /**
    * Searches schedule entries by message text with optional filters and cursor pagination.
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#search-weekly-schedules
    */
@@ -137,7 +143,14 @@ export class NeuroInfoApiClient {
    * Fetches the years for which subathon data is available.
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/subathon.md#subathon-years-1
    */
-  public getSubathonYears = () => this.request<number[]>("/subathon/years");
+  public getSubathonYears(detailed: true): Promise<ApiResult<SubathonYearsDetailedResponse>>;
+  public getSubathonYears(detailed?: false): Promise<ApiResult<SubathonYearsResponse>>;
+  public getSubathonYears(detailed: boolean = false): Promise<ApiResult<SubathonYearsResponse | SubathonYearsDetailedResponse>> {
+    return this.request<SubathonYearsResponse | SubathonYearsDetailedResponse>(
+      "/subathon/years",
+      detailed ? { detailed: true } : undefined,
+    );
+  }
 }
 
 /**
@@ -1098,6 +1111,8 @@ export interface ScheduleLatestResponse extends ScheduleResponse {
   hasActiveSubathon: boolean;
 }
 
+export type ScheduleWeeksResponse = Record<number, number[]>;
+
 export interface ScheduleSearchCursor {
   year: number;
   week: number;
@@ -1143,6 +1158,9 @@ export interface SubathonData {
   startTimestamp?: number; // Unix timestamp
   endTimestamp?: number; // Unix timestamp
 }
+
+export type SubathonYearsResponse = string[];
+export type SubathonYearsDetailedResponse = Record<number, string>;
 
 export interface SubathonGoal {
   name: string;
