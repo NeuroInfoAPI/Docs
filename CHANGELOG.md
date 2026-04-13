@@ -4,6 +4,16 @@ It's definitely time to write a changelog for "important" changes to the docs. <
 *<small>Date format: [DD.MM.YYYY]</small>*
 
 
+## [13.04.2026]
+
+### Changed
+
+- Added `/schedule/weeks` documentation([schedule.md](schedule.md); [quickInfo.md](quickInfo.md); [needsAuth.md](needsAuth.md))
+- Updated schedule cache note for `/schedule/latest` to 1 minute ([schedule.md](schedule.md))
+- Updated `/subathon/years` docs for optional `?detailed` mode including response examples ([subathon.md](subathon.md); [quickInfo.md](quickInfo.md); [needsAuth.md](needsAuth.md))
+- Updated TypeScript client signatures/types for `/schedule/weeks` and `/subathon/years` detailed mode ([clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts))
+
+
 ## [29.03.2026]
 
 ### Added
