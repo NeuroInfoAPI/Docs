@@ -44,6 +44,14 @@ _Full docs of endpoint: [schedule.md](schedule.md)_
 - **Parameters**: None
 - **Public**: Yes
 
+### Schedule Weeks Index
+
+`GET /schedule/weeks`
+
+- **Purpose**: Available schedule week numbers grouped by year
+- **Parameters**: None
+- **Public**: Yes
+
 ## Twitch API
 
 _Full docs of endpoint: [twitch.md](twitch.md)_

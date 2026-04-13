@@ -38,6 +38,7 @@
 
 - `GET /api/v1/schedule/latest` - Latest weekly schedule
 - `GET /api/v1/schedule/devstreamtimes` - Devstream timestamps
+- `GET /api/v1/schedule/weeks` - Available schedule week numbers grouped by year
 - `GET /api/v1/twitch/stream` - Current stream information
 - `GET /api/v1/subathon/current` - Current active subathon
 - `GET /api/v1/subathon/years` - List of all subathon years (`?detailed` for year-to-name map)

@@ -23,9 +23,13 @@
 
 `GET https://neuro.appstun.net/api/v1/schedule/devstreamtimes`
 
+### Schedule Weeks Index
+
+`GET https://neuro.appstun.net/api/v1/schedule/weeks`
+
 ## Description
 
-Access weekly schedule data from the database. Use the specific-week endpoint for exact calendar weeks, the latest endpoint for the most recent published schedule, and the search endpoint to find schedule entries by message text with cursor-based pagination.
+Access weekly schedule data from the database. Use the specific-week endpoint for exact calendar weeks, the latest endpoint for the most recent published schedule, the search endpoint for message-based lookups with cursor pagination, the weeks endpoint to list available weeks per year, and the devstream endpoint for historical devstream timestamps.
 
 ## Endpoints Details
 
@@ -278,6 +282,42 @@ GET https://neuro.appstun.net/api/v1/schedule/devstreamtimes
 [1723680000000, 1723939200000, 1724198400000]
 ```
 
+### Schedule Weeks Index
+
+#### Endpoint
+
+`GET https://neuro.appstun.net/api/v1/schedule/weeks`
+
+#### Description
+
+Returns available schedule week numbers grouped by year.
+
+#### Authentication
+
+**Not required** - This is a public endpoint.
+
+#### Parameters
+
+None
+
+#### Request Example
+
+```http
+GET https://neuro.appstun.net/api/v1/schedule/weeks
+```
+
+#### Response Format
+
+##### Success Response (200)
+
+```json
+{
+  "2023": [11, 12, 13, 14],
+  "2024": [1, 2, 3, 4, 5],
+  "2025": [38, 39, 40, 41, 42]
+}
+```
+
 #### Schedule Entry Properties
 
 | Property  | Type   | Description                                                      | Always included |
@@ -418,4 +458,5 @@ GET https://neuro.appstun.net/api/v1/schedule/devstreamtimes
 - Specific week schedules are cached for 30 minutes
 - Latest schedule is cached for 5 minutes
 - Search responses are cached for 30 seconds
+- `/schedule/weeks` is public and returns available week numbers grouped by year
 - Schedule data is globally cached for a minimum of 6 hours, so changed schedules are not immediately available
