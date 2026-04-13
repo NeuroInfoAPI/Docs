@@ -40,5 +40,5 @@
 - `GET /api/v1/schedule/devstreamtimes` - Devstream timestamps
 - `GET /api/v1/twitch/stream` - Current stream information
 - `GET /api/v1/subathon/current` - Current active subathon
-- `GET /api/v1/subathon/years` - List of all subathon years
+- `GET /api/v1/subathon/years` - List of all subathon years (`?detailed` for year-to-name map)
 - `GET /api/test/geterror` - Test error endpoint

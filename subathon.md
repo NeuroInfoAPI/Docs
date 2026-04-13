@@ -22,7 +22,7 @@
 
 ## Description
 
-Access Subathon data and goal information. The current subathon endpoint is publicly available with generous rate limiting, while specific year data requires authentication.
+Access subathon data and goal information. The current subathon endpoint is publicly available with generous rate limiting, the years endpoint can also return names in detailed mode, and specific year data requires authentication.
 
 ## Endpoints Details
 
@@ -79,7 +79,7 @@ GET https://neuro.appstun.net/api/v1/subathon/current
 
 #### Description
 
-Get a list of all years where a subathon took place.
+Get all years where a subathon took place. Use `?detailed` to include the subathon name for each year.
 
 #### Authentication
 
@@ -87,12 +87,16 @@ Get a list of all years where a subathon took place.
 
 #### Parameters
 
-None
+| Parameter  | Type    | Required | Description                                                    |
+| ---------- | ------- | -------- | -------------------------------------------------------------- |
+| `detailed` | boolean | No       | If present, returns an object mapping `year -> subathon name`. |
 
-#### Request Example
+#### Request Examples
 
 ```http
 GET https://neuro.appstun.net/api/v1/subathon/years
+
+GET https://neuro.appstun.net/api/v1/subathon/years?detailed
 ```
 
 #### Response Format
@@ -101,6 +105,16 @@ GET https://neuro.appstun.net/api/v1/subathon/years
 
 ```json
 [2023, 2024, 2025]
+```
+
+##### Success Response (200, Detailed)
+
+```json
+{
+  "2023": "Neuro-sama Subathon",
+  "2024": "Neuro-sama Subathon 2",
+  "2025": "Neuro-sama Subathon 3"
+}
 ```
 
 ### Subathon Data (Specific Year)
@@ -254,6 +268,7 @@ Authorization: Bearer YOUR_API_TOKEN
 
 - Current subathon endpoint is public with generous rate limiting
 - Specific year data requires authentication with standard rate limiting
+- `/subathon/years` supports `?detailed` to return `{ "year": "subathon name" }`
 - Goals are automatically marked as `reached: true` if the current subscriber count meets or exceeds the goal threshold
 - Subathon data is cached and refreshed periodically
 - Multiple active subathons can exist; `/current` returns an array sorted by year (descending)

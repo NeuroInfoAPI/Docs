@@ -90,9 +90,10 @@ _Full docs of endpoint: [subathon.md](subathon.md)_
 
 `GET /subathon/years`
 
-- **Purpose**: List of all years where a subathon took place
-- **Parameters**: None
+- **Purpose**: List all subathon years (or year-to-name map in detailed mode)
+- **Parameters**: `detailed` (optional, if present returns `{ "year": "subathon name" }`)
 - **Public**: Yes
+- **Example**: `/subathon/years?detailed`
 
 ### Subathon Data (Specific Year)
 
