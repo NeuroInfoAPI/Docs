@@ -22,7 +22,12 @@ export declare class NeuroApiError extends Error {
  */
 export declare class NeuroInfoApiClient {
     apiInstance: AxiosInstance;
-    constructor();
+    /**
+     * Creates a new API client instance.
+     * @param token - Optional authentication token
+     * @param options - Optional configuration options
+     */
+    constructor(token?: string | undefined, options?: NeuroInfoApiClientOptions);
     /**
      * Parses an error into a NeuroApiError with proper code and message.
      */
@@ -264,6 +269,9 @@ export interface NeuroInfoApiWebsocketClientOptions {
      *   **Not supported in browsers.**
      */
     authMethod?: "ticket" | "header";
+}
+export interface NeuroInfoApiClientOptions {
+    baseUrl?: string;
 }
 /** WebSocket event types available for subscription. */
 export type WsEventType = "scheduleUpdate" | "subathonUpdate" | "subathonGoalUpdate" | "streamOnline" | "streamUpdate" | "streamOffline" | "secretneuroaccountOnline" | "streamRaidIncoming" | "streamRaidOutgoing";

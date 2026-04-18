@@ -16,7 +16,12 @@ export class NeuroApiError extends Error {
  * Provides methods to fetch stream data, VODs, schedules, and subathon information.
  */
 export class NeuroInfoApiClient {
-    constructor() {
+    /**
+     * Creates a new API client instance.
+     * @param token - Optional authentication token
+     * @param options - Optional configuration options
+     */
+    constructor(token = undefined, options = {}) {
         /**
          * Fetches the current stream data.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#current-stream-status-1
@@ -76,12 +81,14 @@ export class NeuroInfoApiClient {
          */
         this.getSubathon = (year) => this.request("/subathon", { year });
         this.apiInstance = axios.create({
-            baseURL: `https://${baseDomain}/api/v1`,
+            baseURL: options.baseUrl ?? `https://${baseDomain}/api/v1`,
             timeout: 10000,
             headers: {
                 "Content-Type": "application/json",
             },
         });
+        if (token != null)
+            this.setApiToken(token);
     }
     /**
      * Parses an error into a NeuroApiError with proper code and message.
@@ -208,9 +215,8 @@ export class NeuroInfoApiEventer {
                         }
                         if (cached) {
                             for (const cachedSub of cached) {
-                                if (!subResult.data.find((s) => s.year === cachedSub.year)) {
+                                if (!subResult.data.find((s) => s.year === cachedSub.year))
                                     emit(listeners, { ...cachedSub, isActive: false });
-                                }
                             }
                         }
                         break;
@@ -442,10 +448,9 @@ export class NeuroInfoApiWebsocketClient {
         if (this.websocket?.readyState === WebSocket.OPEN || this.websocket?.readyState === WebSocket.CONNECTING)
             return;
         this.isIntentionallyClosed = false;
-        if (this.authMethod === "header") {
+        if (this.authMethod === "header")
             // Send token via Authorization header (Node.js only, not supported in browsers)
             return this.connectWithUrl(this.baseUrl, { Authorization: `Bearer ${this.token}` });
-        }
         else {
             // Fetch one-time ticket via REST API (token never exposed in URL, works in browsers)
             const ticket = await this.fetchTicket();
@@ -462,9 +467,8 @@ export class NeuroInfoApiWebsocketClient {
             throw new NeuroApiError("TICKET_ERROR", `Failed to fetch connection ticket: ${text}`, response.status);
         }
         const json = await response.json();
-        if (!json?.data?.ticket) {
+        if (!json?.data?.ticket)
             throw new NeuroApiError("TICKET_ERROR", "Invalid ticket response from server");
-        }
         return json.data.ticket;
     }
     /** Internal: Connect to WebSocket with the given URL and optional headers */
@@ -480,9 +484,8 @@ export class NeuroInfoApiWebsocketClient {
                     this.websocket = new WS(url, undefined, { headers });
                 }
             }
-            else {
+            else
                 this.websocket = new WebSocket(url);
-            }
             let settled = false;
             const onOpen = () => {
                 this.reconnectAttempts = 0;
@@ -561,18 +564,16 @@ export class NeuroInfoApiWebsocketClient {
                     this.pendingSubscriptions.delete(msg.data.eventType);
                     this.emitSystem("_eventAdded", msg.data.eventType);
                 }
-                else {
+                else
                     this.emitSystem("_error", new NeuroApiError("WS_SUBSCRIBE_FAILED", `Server rejected event subscription: ${msg.data.eventType}`));
-                }
                 break;
             case "removeSuccess":
                 if (msg.data.unsubscribed) {
                     this.subscribedEvents.delete(msg.data.eventType);
                     this.emitSystem("_eventRemoved", msg.data.eventType);
                 }
-                else {
+                else
                     this.emitSystem("_error", new NeuroApiError("WS_UNSUBSCRIBE_FAILED", `Server rejected event unsubscription: ${msg.data.eventType}`));
-                }
                 break;
             case "invalid":
                 this.emitSystem("_error", new NeuroApiError("WS_INVALID", msg.data.message || msg.data.reason));
@@ -595,9 +596,8 @@ export class NeuroInfoApiWebsocketClient {
     handleClose(event) {
         this.sessionId = null;
         this.emitSystem("_disconnected", event.code, event.reason);
-        if (!this.isIntentionallyClosed && this.autoReconnect) {
+        if (!this.isIntentionallyClosed && this.autoReconnect)
             this.scheduleReconnect();
-        }
     }
     scheduleReconnect() {
         if (this._maxReconnectAttempts > 0 && this.reconnectAttempts >= this._maxReconnectAttempts) {
@@ -614,9 +614,8 @@ export class NeuroInfoApiWebsocketClient {
                 await this.connect();
             }
             catch {
-                if (!this.isIntentionallyClosed && this.autoReconnect) {
+                if (!this.isIntentionallyClosed && this.autoReconnect)
                     this.scheduleReconnect();
-                }
             }
         }, delay);
     }
@@ -641,9 +640,8 @@ export class NeuroInfoApiWebsocketClient {
         this.send({ type: "removeEvent", data: { eventType } });
     }
     send(message) {
-        if (this.websocket?.readyState === WebSocket.OPEN) {
+        if (this.websocket?.readyState === WebSocket.OPEN)
             this.websocket.send(JSON.stringify(message));
-        }
     }
     isEventType(event) {
         return (event === "scheduleUpdate" ||
@@ -658,22 +656,19 @@ export class NeuroInfoApiWebsocketClient {
     }
     on(event, callback) {
         if (this.isEventType(event)) {
-            if (!this.eventListeners.has(event)) {
+            if (!this.eventListeners.has(event))
                 this.eventListeners.set(event, new Set());
-            }
             const entry = { callback: callback };
             this.eventListeners.get(event).add(entry);
             if (!this.subscribedEvents.has(event) && !this.pendingSubscriptions.has(event)) {
                 this.pendingSubscriptions.add(event);
-                if (this.isConnected) {
+                if (this.isConnected)
                     this.sendSubscribe(event);
-                }
             }
             return () => this.off(event, callback);
         }
-        if (!this.systemListeners.has(event)) {
+        if (!this.systemListeners.has(event))
             this.systemListeners.set(event, new Set());
-        }
         this.systemListeners.get(event).add(callback);
         return () => this.off(event, callback);
     }
@@ -692,9 +687,8 @@ export class NeuroInfoApiWebsocketClient {
                 this.eventListeners.delete(event);
                 this.subscribedEvents.delete(event);
                 this.pendingSubscriptions.delete(event);
-                if (this.isConnected) {
+                if (this.isConnected)
                     this.sendUnsubscribe(event);
-                }
             }
             return;
         }

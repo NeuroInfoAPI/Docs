@@ -30,14 +30,21 @@ export class NeuroApiError extends Error {
 export class NeuroInfoApiClient {
   public apiInstance: AxiosInstance;
 
-  constructor() {
+  /**
+   * Creates a new API client instance.
+   * @param token - Optional authentication token
+   * @param options - Optional configuration options
+   */
+  constructor(token: string | undefined = undefined, options: NeuroInfoApiClientOptions = {}) {
     this.apiInstance = axios.create({
-      baseURL: `https://${baseDomain}/api/v1`,
+      baseURL: options.baseUrl ?? `https://${baseDomain}/api/v1`,
       timeout: 10000,
       headers: {
         "Content-Type": "application/json",
       },
     });
+
+    if (token != null) this.setApiToken(token);
   }
 
   /**
@@ -247,9 +254,7 @@ export class NeuroInfoApiEventer {
 
             if (cached) {
               for (const cachedSub of cached) {
-                if (!subResult.data.find((s) => s.year === cachedSub.year)) {
-                  emit(listeners, { ...cachedSub, isActive: false });
-                }
+                if (!subResult.data.find((s) => s.year === cachedSub.year)) emit(listeners, { ...cachedSub, isActive: false });
               }
             }
             break;
@@ -507,10 +512,10 @@ export class NeuroInfoApiWebsocketClient {
 
     this.isIntentionallyClosed = false;
 
-    if (this.authMethod === "header") {
+    if (this.authMethod === "header")
       // Send token via Authorization header (Node.js only, not supported in browsers)
       return this.connectWithUrl(this.baseUrl, { Authorization: `Bearer ${this.token}` });
-    } else {
+    else {
       // Fetch one-time ticket via REST API (token never exposed in URL, works in browsers)
       const ticket = await this.fetchTicket();
       return this.connectWithUrl(`${this.baseUrl}?ticket=${encodeURIComponent(ticket)}`);
@@ -529,9 +534,7 @@ export class NeuroInfoApiWebsocketClient {
     }
 
     const json = await response.json();
-    if (!json?.data?.ticket) {
-      throw new NeuroApiError("TICKET_ERROR", "Invalid ticket response from server");
-    }
+    if (!json?.data?.ticket) throw new NeuroApiError("TICKET_ERROR", "Invalid ticket response from server");
 
     return json.data.ticket;
   }
@@ -547,9 +550,8 @@ export class NeuroInfoApiWebsocketClient {
         } catch {
           this.websocket = new WS(url, undefined, { headers }) as WebSocket;
         }
-      } else {
-        this.websocket = new WebSocket(url);
-      }
+      } else this.websocket = new WebSocket(url);
+
       let settled = false;
 
       const onOpen = () => {
@@ -635,20 +637,20 @@ export class NeuroInfoApiWebsocketClient {
           this.subscribedEvents.add(msg.data.eventType);
           this.pendingSubscriptions.delete(msg.data.eventType);
           this.emitSystem("_eventAdded", msg.data.eventType);
-        } else {
+        } else
           this.emitSystem("_error", new NeuroApiError("WS_SUBSCRIBE_FAILED", `Server rejected event subscription: ${msg.data.eventType}`));
-        }
+
         break;
       case "removeSuccess":
         if (msg.data.unsubscribed) {
           this.subscribedEvents.delete(msg.data.eventType);
           this.emitSystem("_eventRemoved", msg.data.eventType);
-        } else {
+        } else
           this.emitSystem(
             "_error",
             new NeuroApiError("WS_UNSUBSCRIBE_FAILED", `Server rejected event unsubscription: ${msg.data.eventType}`),
           );
-        }
+
         break;
       case "invalid":
         this.emitSystem("_error", new NeuroApiError("WS_INVALID", msg.data.message || msg.data.reason));
@@ -674,9 +676,7 @@ export class NeuroInfoApiWebsocketClient {
     this.sessionId = null;
     this.emitSystem("_disconnected", event.code, event.reason);
 
-    if (!this.isIntentionallyClosed && this.autoReconnect) {
-      this.scheduleReconnect();
-    }
+    if (!this.isIntentionallyClosed && this.autoReconnect) this.scheduleReconnect();
   }
 
   private scheduleReconnect(): void {
@@ -699,9 +699,7 @@ export class NeuroInfoApiWebsocketClient {
       try {
         await this.connect();
       } catch {
-        if (!this.isIntentionallyClosed && this.autoReconnect) {
-          this.scheduleReconnect();
-        }
+        if (!this.isIntentionallyClosed && this.autoReconnect) this.scheduleReconnect();
       }
     }, delay);
   }
@@ -731,9 +729,7 @@ export class NeuroInfoApiWebsocketClient {
   }
 
   private send(message: WsClientMessage): void {
-    if (this.websocket?.readyState === WebSocket.OPEN) {
-      this.websocket.send(JSON.stringify(message));
-    }
+    if (this.websocket?.readyState === WebSocket.OPEN) this.websocket.send(JSON.stringify(message));
   }
 
   private isEventType(event: WsEventType | WsSystemEvent): event is WsEventType {
@@ -763,26 +759,20 @@ export class NeuroInfoApiWebsocketClient {
     callback: ((...args: any[]) => void) | ((data: any, timestamp: number) => void),
   ): () => void {
     if (this.isEventType(event)) {
-      if (!this.eventListeners.has(event)) {
-        this.eventListeners.set(event, new Set());
-      }
+      if (!this.eventListeners.has(event)) this.eventListeners.set(event, new Set());
 
       const entry: WsEventListenerEntry<any> = { callback: callback as (data: any, timestamp: number) => void };
       this.eventListeners.get(event)!.add(entry);
 
       if (!this.subscribedEvents.has(event) && !this.pendingSubscriptions.has(event)) {
         this.pendingSubscriptions.add(event);
-        if (this.isConnected) {
-          this.sendSubscribe(event);
-        }
+        if (this.isConnected) this.sendSubscribe(event);
       }
 
       return () => this.off(event, callback as (data: any, timestamp: number) => void);
     }
 
-    if (!this.systemListeners.has(event)) {
-      this.systemListeners.set(event, new Set());
-    }
+    if (!this.systemListeners.has(event)) this.systemListeners.set(event, new Set());
     this.systemListeners.get(event)!.add(callback as (...args: any[]) => void);
     return () => this.off(event, callback as (...args: any[]) => void);
   }
@@ -810,9 +800,7 @@ export class NeuroInfoApiWebsocketClient {
         this.eventListeners.delete(event);
         this.subscribedEvents.delete(event);
         this.pendingSubscriptions.delete(event);
-        if (this.isConnected) {
-          this.sendUnsubscribe(event);
-        }
+        if (this.isConnected) this.sendUnsubscribe(event);
       }
       return;
     }
@@ -872,6 +860,10 @@ export interface NeuroInfoApiWebsocketClientOptions {
    *   **Not supported in browsers.**
    */
   authMethod?: "ticket" | "header";
+}
+
+export interface NeuroInfoApiClientOptions {
+  baseUrl?: string;
 }
 
 /** WebSocket event types available for subscription. */
