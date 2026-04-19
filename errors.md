@@ -185,6 +185,7 @@ The WebSocket API uses two different error formats:
 
 #### WebSocket Handshake Errors (plain text)
 
+- `404 Not Found` (invalid WebSocket path)
 - `401 Missing authentication (ticket or token required)`
 - `401 Invalid or expired ticket`
 - `401 Invalid or expired token`

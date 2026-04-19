@@ -4,6 +4,14 @@ It's definitely time to write a changelog for "important" changes to the docs. <
 *<small>Date format: [DD.MM.YYYY]</small>*
 
 
+## [19.04.2026]
+
+### Changed
+
+- Corrected `/api/v1/twitch/vod` quick reference wording to clearly describe streamId-based lookup ([quickInfo.md](quickInfo.md))
+- Updated error code of WebSocket handshake ([errors.md](errors.md))
+
+
 ## [13.04.2026]
 
 ### Changed
