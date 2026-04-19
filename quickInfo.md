@@ -76,7 +76,6 @@ _Full docs of endpoint: [twitch.md](twitch.md)_
 
 `GET /twitch/vod`
 
-- **Purpose**: Latest or specific VOD
 - **Purpose**: Specific VOD by stream ID
 - **Parameters**: `streamId` (required)
 - **Public**: No (Auth required)
