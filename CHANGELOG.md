@@ -4,6 +4,15 @@ It's definitely time to write a changelog for "important" changes to the docs. <
 *<small>Date format: [DD.MM.YYYY]</small>*
 
 
+## [21.04.2026]
+
+### Changed
+
+- Documented lightweight WebSocket `ping`/`pong` keepalive messages ([websocket.md](websocket.md), [quickInfo.md](quickInfo.md))
+- Added client-side WebSocket heartbeat (`ping`/`pong`) to TS/JS client ([clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript))
+- Fixed Twitch stream `startedAt` timestamp format in docs and TS/JS client type ([twitch.md](twitch.md); [NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/))
+
+
 ## [19.04.2026]
 
 ### Changed

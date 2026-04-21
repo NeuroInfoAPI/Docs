@@ -106,6 +106,8 @@ export declare class NeuroInfoApiEventer {
     get fetchInterval(): number;
     set fetchInterval(value: number);
     constructor();
+    private emitInternalError;
+    private runProcessEvents;
     private processEvents;
     /** Starts the event loop that fetches events at regular intervals. */
     startEventLoop(): void;
@@ -177,8 +179,13 @@ export declare class NeuroInfoApiWebsocketClient {
     private reconnectAttempts;
     private reconnectTimeout;
     private isIntentionallyClosed;
+    private heartbeatIntervalHandle;
+    private heartbeatTimeoutHandle;
+    private pendingHeartbeat;
     /** Whether to automatically reconnect on disconnect. Default is true. */
     autoReconnect: boolean;
+    /** Whether to automatically send heartbeat pings while connected. Default is true. */
+    autoHeartbeat: boolean;
     private _maxReconnectAttempts;
     /** Maximum number of reconnect attempts. Default is 10. Set to 0 for unlimited. */
     get maxReconnectAttempts(): number;
@@ -187,6 +194,14 @@ export declare class NeuroInfoApiWebsocketClient {
     /** Base delay in milliseconds for reconnection backoff. Default is 1000ms. */
     get reconnectBaseDelay(): number;
     set reconnectBaseDelay(value: number);
+    private _heartbeatIntervalMs;
+    /** Interval in milliseconds for heartbeat pings. Default is 30000ms. Minimum is 5000ms. */
+    get heartbeatIntervalMs(): number;
+    set heartbeatIntervalMs(value: number);
+    private _heartbeatTimeoutMs;
+    /** Timeout in milliseconds waiting for a heartbeat pong. Default is 10000ms. Minimum is 1000ms. */
+    get heartbeatTimeoutMs(): number;
+    set heartbeatTimeoutMs(value: number);
     /**
      * Creates a new WebSocket client instance.
      * @param token - Authentication token (required for connection)
@@ -219,9 +234,14 @@ export declare class NeuroInfoApiWebsocketClient {
     private handleClose;
     private scheduleReconnect;
     private clearReconnectTimeout;
+    private startHeartbeat;
+    private stopHeartbeat;
+    private sendHeartbeatPing;
+    private acknowledgeHeartbeat;
     private resubscribeEvents;
     private sendSubscribe;
     private sendUnsubscribe;
+    private sendPing;
     private send;
     private isEventType;
     /**
@@ -269,6 +289,21 @@ export interface NeuroInfoApiWebsocketClientOptions {
      *   **Not supported in browsers.**
      */
     authMethod?: "ticket" | "header";
+    /**
+     * Enable client-side ping/pong heartbeat.
+     * Default: `true`
+     */
+    autoHeartbeat?: boolean;
+    /**
+     * Heartbeat ping interval in milliseconds.
+     * Default: `25000` (minimum `5000`).
+     */
+    heartbeatIntervalMs?: number;
+    /**
+     * Heartbeat pong timeout in milliseconds.
+     * Default: `10000` (minimum `1000`).
+     */
+    heartbeatTimeoutMs?: number;
 }
 export interface NeuroInfoApiClientOptions {
     baseUrl?: string;
@@ -276,7 +311,7 @@ export interface NeuroInfoApiClientOptions {
 /** WebSocket event types available for subscription. */
 export type WsEventType = "scheduleUpdate" | "subathonUpdate" | "subathonGoalUpdate" | "streamOnline" | "streamUpdate" | "streamOffline" | "secretneuroaccountOnline" | "streamRaidIncoming" | "streamRaidOutgoing";
 /** System events emitted by the WebSocket client. */
-export type WsSystemEvent = "_connected" | "_disconnected" | "_reconnecting" | "_reconnectFailed" | "_error" | "_message" | "_eventAdded" | "_eventRemoved";
+export type WsSystemEvent = "_connected" | "_disconnected" | "_reconnecting" | "_reconnectFailed" | "_error" | "_message" | "_pong" | "_eventAdded" | "_eventRemoved";
 /** Mapping of system events to their callback signatures. */
 export interface WsSystemEventCallbacks {
     _connected: (sessionId: string) => void;
@@ -285,6 +320,7 @@ export interface WsSystemEventCallbacks {
     _reconnectFailed: () => void;
     _error: (error: Event | NeuroApiError) => void;
     _message: (message: WsServerMessage) => void;
+    _pong: () => void;
     _eventAdded: (eventType: WsEventType) => void;
     _eventRemoved: (eventType: WsEventType) => void;
 }
@@ -401,6 +437,10 @@ interface WsListEventsMessage {
         availableEvents: WsEventType[];
     };
 }
+interface WsPongMessage {
+    type: "pong";
+    data: Record<string, never>;
+}
 interface WsEventMessage<T extends WsEventType = WsEventType> {
     type: "event";
     data: {
@@ -409,7 +449,7 @@ interface WsEventMessage<T extends WsEventType = WsEventType> {
         timestamp: number;
     };
 }
-export type WsServerMessage = WsWelcomeMessage | WsInvalidMessage | WsAddSuccessMessage | WsRemoveSuccessMessage | WsListEventsMessage | WsEventMessage;
+export type WsServerMessage = WsWelcomeMessage | WsInvalidMessage | WsAddSuccessMessage | WsRemoveSuccessMessage | WsListEventsMessage | WsPongMessage | WsEventMessage;
 export interface ApiClientEvents {
     streamOnline: TwitchStreamData;
     streamOffline: TwitchStreamData;

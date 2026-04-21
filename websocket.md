@@ -129,6 +129,14 @@ Authorization: Bearer YOUR_API_TOKEN
 }
 ```
 
+##### Ping (Lightweight Keepalive for client)
+
+```json
+{
+  "type": "ping"
+}
+```
+
 #### Server Message Format
 
 ##### Welcome Message
@@ -199,6 +207,13 @@ Authorization: Bearer YOUR_API_TOKEN
       "streamRaidOutgoing"
     ]
   }
+}
+```
+
+```json
+{
+  "type": "pong",
+  "data": {}
 }
 ```
 
@@ -291,4 +306,5 @@ Possible `reason` values:
 - Maximum 5 active WebSocket connections per user (unlimited tokens excluded)
 - `streamUpdate` events are throttled to at most one broadcast every 2 seconds
 - Keepalive pings are enabled; idle timeout is 60 seconds
+- For lightweight client-side liveness checks, prefer `ping`/`pong` over `listEvents`
 - WebSocket uses the next port after the HTTP API server (typically API port + 1)

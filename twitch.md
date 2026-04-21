@@ -69,7 +69,7 @@ GET https://neuro.appstun.net/api/v1/twitch/stream
 	],
 	"isMature": false,
 	"viewerCount": 5799,
-	"startedAt": "2025-08-19T18:00:43.000Z",
+	"startedAt": 1273638393734,
 	"thumbnailUrl": "https://static-cdn.jtvnw.net/previews-ttv/live_user_vedal987-{width}x{height}.jpg",
 }
 ```
