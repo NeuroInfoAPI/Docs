@@ -160,6 +160,40 @@ Authorization: Bearer YOUR_API_TOKEN
 }
 ```
 
+##### Blog Feed Update Event
+
+```json
+{
+  "type": "event",
+  "data": {
+    "eventType": "blogFeedUpdate",
+    "eventData": {
+      "url": "https://blog.neurosama.com/",
+      "lastUpdated": 1774872600000,
+      "title": "Neuro-sama Blog",
+      "subtitle": "Official updates and announcements",
+      "entries": [
+        {
+          "title": "Weekly Update",
+          "author": "Vedal",
+          "url": "https://blog.neurosama.com/posts/weekly-update",
+          "published": 1774872000000,
+          "updated": 1774872600000,
+          "content": [
+            {
+              "header": "Highlights",
+              "body": "Neuro will be live more often this week."
+            }
+          ],
+          "summary": "Neuro will be live more often this week."
+        }
+      ]
+    },
+    "timestamp": 1774872605000
+  }
+}
+```
+
 ##### Subscription Responses
 
 ```json
@@ -188,6 +222,7 @@ Authorization: Bearer YOUR_API_TOKEN
   "data": {
     "subscribedEvents": ["streamOnline"],
     "availableEvents": [
+      "blogFeedUpdate",
       "scheduleUpdate",
       "subathonUpdate",
       "subathonGoalUpdate",
@@ -206,6 +241,7 @@ Authorization: Bearer YOUR_API_TOKEN
 
 | Event Type                 | Description                                                   |
 | -------------------------- | ------------------------------------------------------------- |
+| `blogFeedUpdate`           | Blog feed changed; payload contains only changed/new entries  |
 | `scheduleUpdate`           | Weekly schedule was updated                                   |
 | `subathonUpdate`           | Subathon state changed                                        |
 | `subathonGoalUpdate`       | Subathon goal status changed                                  |
@@ -290,5 +326,6 @@ Possible `reason` values:
 - Ticket validity is 30 seconds and each ticket is one-time use
 - Maximum 5 active WebSocket connections per user (unlimited tokens excluded)
 - `streamUpdate` events are throttled to at most one broadcast every 2 seconds
+- `blogFeedUpdate` broadcasts only changed or newly added entries
 - Keepalive pings are enabled; idle timeout is 60 seconds
 - WebSocket uses the next port after the HTTP API server (typically API port + 1)

@@ -14,6 +14,7 @@ This repository contains documentation for all public API areas:
 - **[Schedule API](schedule.md)** - Weekly stream schedules
 - **[Twitch API](twitch.md)** - Stream status and VOD data
 - **[Subathon API](subathon.md)** - Subathon goals and progress
+- **[Blog API](blog.md)** - Neuro-sama blog feed and entry content
 - **[WebSocket API](websocket.md)** - Real-time events and WebSocket authentication
 - **[Prebuild Clients](clients/README.md)** - ready-to-use clients for your project
 
@@ -37,7 +38,7 @@ This repository contains documentation for all public API areas:
 
 - Real-time event stream via WebSocket
 - Secure browser auth via one-time ticket endpoint
-- Event subscriptions for stream, schedule, and subathon updates
+- Event subscriptions for stream, schedule, subathon, and blog updates
 - Automatic reconnect support in the TypeScript client
 
 ### Subathon Tracking
@@ -46,6 +47,13 @@ This repository contains documentation for all public API areas:
 - Goal tracking and completion status
 - Historical subathon data
 - Real-time subscriber counts
+
+### Blog Feed
+
+- Cached Neuro-sama blog feed access (refreshes every 15 minutes)
+- Parsed entry content or raw HTML content
+- Authentication required for JSON endpoint
+- Real-time update event for changed feed entries
 
 ## 📖 Getting Started
 

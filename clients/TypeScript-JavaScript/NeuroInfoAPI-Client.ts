@@ -158,6 +158,12 @@ export class NeuroInfoApiClient {
       detailed ? { detailed: true } : undefined,
     );
   }
+
+  /**
+   * Fetches the Neuro-sama blog feed. Requires an API token.
+   * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/blog.md#endpoint
+   */
+  public getBlogFeed = (raw: boolean = false) => this.request<BlogFeedResponse>("/blog/feed", raw ? { raw: true } : undefined);
 }
 
 /**
@@ -734,6 +740,7 @@ export class NeuroInfoApiWebsocketClient {
 
   private isEventType(event: WsEventType | WsSystemEvent): event is WsEventType {
     return (
+      event === "blogFeedUpdate" ||
       event === "scheduleUpdate" ||
       event === "subathonUpdate" ||
       event === "subathonGoalUpdate" ||
@@ -868,6 +875,7 @@ export interface NeuroInfoApiClientOptions {
 
 /** WebSocket event types available for subscription. */
 export type WsEventType =
+  | "blogFeedUpdate"
   | "scheduleUpdate"
   | "subathonUpdate"
   | "subathonGoalUpdate"
@@ -953,6 +961,36 @@ export interface WsScheduleUpdateData {
   isFinal: boolean;
 }
 
+export interface BlogEntryBodySection {
+  header: string;
+  body: string;
+}
+
+export interface BlogFeedEntry {
+  title: string;
+  author: string;
+  url: string;
+  published: number;
+  updated: number;
+  content?: BlogEntryBodySection[];
+  rawContent?: string;
+  summary: string;
+}
+
+export interface BlogFeedData {
+  url: string;
+  lastUpdated: number;
+  title: string;
+  subtitle: string;
+  entries: BlogFeedEntry[];
+}
+
+export interface BlogFeedResponse {
+  data: BlogFeedData;
+}
+
+export interface WsBlogFeedUpdateData extends BlogFeedData {}
+
 /** Event data for subathonUpdate event. */
 export interface WsSubathonUpdateData {
   year: number;
@@ -974,6 +1012,7 @@ export interface WsSubathonGoalUpdateData {
 
 /** Mapping of event types to their data structures. */
 export interface WsEventDataMap {
+  blogFeedUpdate: WsBlogFeedUpdateData;
   streamOnline: WsStreamOnlineData;
   streamOffline: WsStreamOfflineData;
   streamUpdate: WsStreamUpdateData;

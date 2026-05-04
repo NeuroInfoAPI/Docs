@@ -87,6 +87,11 @@ export declare class NeuroInfoApiClient {
      */
     getSubathonYears(detailed: true): Promise<ApiResult<SubathonYearsDetailedResponse>>;
     getSubathonYears(detailed?: false): Promise<ApiResult<SubathonYearsResponse>>;
+    /**
+     * Fetches the Neuro-sama blog feed.
+     * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/blog.md#endpoint
+     */
+    getBlogFeed: (raw?: boolean) => Promise<ApiResult<BlogFeedResponse>>;
 }
 /**
  * Event-based wrapper for the NeuroInfo API.
@@ -274,7 +279,7 @@ export interface NeuroInfoApiClientOptions {
     baseUrl?: string;
 }
 /** WebSocket event types available for subscription. */
-export type WsEventType = "scheduleUpdate" | "subathonUpdate" | "subathonGoalUpdate" | "streamOnline" | "streamUpdate" | "streamOffline" | "secretneuroaccountOnline" | "streamRaidIncoming" | "streamRaidOutgoing";
+export type WsEventType = "blogFeedUpdate" | "scheduleUpdate" | "subathonUpdate" | "subathonGoalUpdate" | "streamOnline" | "streamUpdate" | "streamOffline" | "secretneuroaccountOnline" | "streamRaidIncoming" | "streamRaidOutgoing";
 /** System events emitted by the WebSocket client. */
 export type WsSystemEvent = "_connected" | "_disconnected" | "_reconnecting" | "_reconnectFailed" | "_error" | "_message" | "_eventAdded" | "_eventRemoved";
 /** Mapping of system events to their callback signatures. */
@@ -336,6 +341,32 @@ export interface WsScheduleUpdateData {
     schedule: ScheduleEntry[];
     isFinal: boolean;
 }
+export interface BlogEntryBodySection {
+    header: string;
+    body: string;
+}
+export interface BlogFeedEntry {
+    title: string;
+    author: string;
+    url: string;
+    published: number;
+    updated: number;
+    content?: BlogEntryBodySection[];
+    rawContent?: string;
+    summary: string;
+}
+export interface BlogFeedData {
+    url: string;
+    lastUpdated: number;
+    title: string;
+    subtitle: string;
+    entries: BlogFeedEntry[];
+}
+export interface BlogFeedResponse {
+    data: BlogFeedData;
+}
+export interface WsBlogFeedUpdateData extends BlogFeedData {
+}
 /** Event data for subathonUpdate event. */
 export interface WsSubathonUpdateData {
     year: number;
@@ -357,6 +388,7 @@ export interface WsSubathonGoalUpdateData {
 }
 /** Mapping of event types to their data structures. */
 export interface WsEventDataMap {
+    blogFeedUpdate: WsBlogFeedUpdateData;
     streamOnline: WsStreamOnlineData;
     streamOffline: WsStreamOfflineData;
     streamUpdate: WsStreamUpdateData;
