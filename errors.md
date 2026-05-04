@@ -91,6 +91,12 @@ Error responses follow a consistent JSON format. Success responses can differ by
 | `SB3` | `Subathon_InvalidParams`    | Invalid year parameter or year cannot be in the future |
 | `SB4` | `Subathon_NoSubathon`       | No subathon found for the specified year               |
 
+### Blog Errors (BL)
+
+| Code  | Error             | Description        |
+| ----- | ----------------- | ------------------ |
+| `BL1` | `Blog_NoBlogData` | No blog data found |
+
 ## Testing Endpoint
 
 ### Get Error Code

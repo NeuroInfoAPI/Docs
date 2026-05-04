@@ -111,6 +111,19 @@ _Full docs of endpoint: [subathon.md](subathon.md)_
 - **Public**: No (Auth required)
 - **Example**: `/subathon?year=2024`
 
+## Blog API
+
+_Full docs of endpoint: [blog.md](blog.md)_
+
+### Blog Feed
+
+`GET /blog/feed`
+
+- **Purpose**: Cached Neuro-sama blog feed with parsed entry content
+- **Parameters**: `raw` (optional, if present returns `rawContent` HTML instead of parsed `content`)
+- **Public**: No (Auth required)
+- **Example**: `/blog/feed?raw`
+
 ## WebSocket API
 
 _Full docs of endpoint: [websocket.md](websocket.md)_
@@ -129,7 +142,7 @@ _Full docs of endpoint: [websocket.md](websocket.md)_
 
 - **Purpose**: Receive real-time stream/schedule/subathon events
 - **Authentication**: Required (ticket query param or Authorization header)
-- **Event Types**: `scheduleUpdate`, `subathonUpdate`, `subathonGoalUpdate`, `streamOnline`, `streamUpdate`, `streamOffline`, `secretneuroaccountOnline`, `streamRaidIncoming`, `streamRaidOutgoing`
+- **Event Types**: `blogFeedUpdate`, `scheduleUpdate`, `subathonUpdate`, `subathonGoalUpdate`, `streamOnline`, `streamUpdate`, `streamOffline`, `secretneuroaccountOnline`, `streamRaidIncoming`, `streamRaidOutgoing`
 - **Heartbeat Tip**: For custom clients, use lightweight `ping`/`pong` for liveness checks
 - **Example**: `/api/ws?ticket=YOUR_ONE_TIME_TICKET`
 

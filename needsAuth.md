@@ -22,6 +22,11 @@
 - **`GET /api/v1/subathon`** - Get subathon data for specific year
   - Parameters: `year` (required)
 
+## Blog API
+
+- **`GET /api/v1/blog/feed`** - Get the cached blog feed
+  - Parameters: `raw` (optional)
+
 ## WebSocket API
 
 - **`GET /api/ws/ticket`** - Get one-time WebSocket ticket

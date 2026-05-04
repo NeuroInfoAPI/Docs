@@ -19,6 +19,7 @@ A comprehensive TypeScript client that provides full access to all NeuroInfoAPI 
 - 📝 **Full TypeScript Support** - Complete type definitions for all API responses
 - ⏱️ **Timeout Protection** - 10-second request timeout by default
 - ✅ **Type-Safe Error Handling** - Result pattern with `{ data, error }` return type
+- 📰 **Blog Feed Support** - Fetch parsed or raw blog feed data
 - ~~📡 **Event System** - `NeuroInfoApiEventer` for "real-time" updates~~ (deprecated)
 - ⚡ **WebSocket Client** - `NeuroInfoApiWebsocketClient` for true real-time updates with auto reconnect
 
@@ -81,6 +82,25 @@ if (error) {
 
 // TypeScript knows data is TwitchStreamData here
 console.log(data.title);
+```
+
+### Blog Feed
+
+`getBlogFeed()` requires an API token. Use `getBlogFeed()` for parsed sections or `getBlogFeed(true)` for raw HTML content.
+
+```typescript
+client.setApiToken("your-api-token-here");
+
+const parsedFeed = await client.getBlogFeed();
+const rawFeed = await client.getBlogFeed(true);
+
+if (parsedFeed.data) {
+  console.log(parsedFeed.data.data.entries[0]?.content);
+}
+
+if (rawFeed.data) {
+  console.log(rawFeed.data.data.entries[0]?.rawContent);
+}
 ```
 
 ### Schedule Search Pagination
@@ -181,17 +201,18 @@ await wsClient.connect();
 
 **Available WebSocket Events:**
 
-| Event                      | Description                               |
-| -------------------------- | ----------------------------------------- |
-| `streamOnline`             | Stream went live                          |
-| `streamOffline`            | Stream went offline                       |
-| `streamUpdate`             | Stream metadata changed                   |
-| `secretneuroaccountOnline` | Special alert: secretneuroaccount is live |
-| `streamRaidIncoming`       | Incoming raid event                       |
-| `streamRaidOutgoing`       | Outgoing raid event                       |
-| `scheduleUpdate`           | Weekly schedule changed                   |
-| `subathonUpdate`           | Subathon state changed                    |
-| `subathonGoalUpdate`       | Subathon goal changed                     |
+| Event                      | Description                                          |
+| -------------------------- | ---------------------------------------------------- |
+| `streamOnline`             | Stream went live                                     |
+| `streamOffline`            | Stream went offline                                  |
+| `streamUpdate`             | Stream metadata changed                              |
+| `secretneuroaccountOnline` | Special alert: secretneuroaccount is live            |
+| `streamRaidIncoming`       | Incoming raid event                                  |
+| `streamRaidOutgoing`       | Outgoing raid event                                  |
+| `blogFeedUpdate`           | Blog feed changed; includes changed/new entries only |
+| `scheduleUpdate`           | Weekly schedule changed                              |
+| `subathonUpdate`           | Subathon state changed                               |
+| `subathonGoalUpdate`       | Subathon goal changed                                |
 
 `secretneuroaccountOnline` sends the same payload shape as `streamOnline`, but it is emitted specifically when the Twitch account `secretneuroaccount` goes live. This is the only event for this account.
 

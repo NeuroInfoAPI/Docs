@@ -460,3 +460,4 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 - Search responses are cached for 30 seconds
 - `/schedule/weeks` is public and returns available week numbers grouped by year
 - Schedule data is globally cached for a minimum of 6 hours, so changed schedules are not immediately available
+- Messages of schedule day can include Discord markdowns

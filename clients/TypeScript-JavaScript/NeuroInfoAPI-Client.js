@@ -80,6 +80,11 @@ export class NeuroInfoApiClient {
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/subathon.md#subathon-data-specific-year-1
          */
         this.getSubathon = (year) => this.request("/subathon", { year });
+        /**
+         * Fetches the Neuro-sama blog feed.
+         * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/blog.md#endpoint
+         */
+        this.getBlogFeed = (raw = false) => this.request("/blog/feed", raw ? { raw: true } : undefined);
         this.apiInstance = axios.create({
             baseURL: options.baseUrl ?? `https://${baseDomain}/api/v1`,
             timeout: 10000,
@@ -751,7 +756,8 @@ export class NeuroInfoApiWebsocketClient {
             this.websocket.send(JSON.stringify(message));
     }
     isEventType(event) {
-        return (event === "scheduleUpdate" ||
+        return (event === "blogFeedUpdate" ||
+            event === "scheduleUpdate" ||
             event === "subathonUpdate" ||
             event === "subathonGoalUpdate" ||
             event === "streamOnline" ||
