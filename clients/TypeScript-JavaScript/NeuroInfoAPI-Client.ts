@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, isAxiosError } from "axios";
+import { FetchError, ofetch } from "ofetch";
 
 type Success<T> = { data: T; error: null };
 type Failure = { data: null; error: NeuroApiError };
@@ -28,7 +28,9 @@ export class NeuroApiError extends Error {
  * Provides methods to fetch stream data, VODs, schedules, and subathon information.
  */
 export class NeuroInfoApiClient {
-  public apiInstance: AxiosInstance;
+  public apiInstance: ReturnType<typeof ofetch.create>;
+  private apiToken: string | null = null;
+  private baseUrl: string;
 
   /**
    * Creates a new API client instance.
@@ -36,8 +38,9 @@ export class NeuroInfoApiClient {
    * @param options - Optional configuration options
    */
   constructor(token: string | undefined = undefined, options: NeuroInfoApiClientOptions = {}) {
-    this.apiInstance = axios.create({
-      baseURL: options.baseUrl ?? `https://${baseDomain}/api/v1`,
+    this.baseUrl = options.baseUrl ?? `https://${baseDomain}/api/v1`;
+    this.apiInstance = ofetch.create({
+      baseURL: this.baseUrl,
       timeout: 10000,
       headers: {
         "Content-Type": "application/json",
@@ -51,8 +54,8 @@ export class NeuroInfoApiClient {
    * Parses an error into a NeuroApiError with proper code and message.
    */
   private parseError(error: unknown): NeuroApiError {
-    if (isAxiosError(error)) {
-      const apiError = error.response?.data?.error;
+    if (error instanceof FetchError) {
+      const apiError = (error.data as { error?: { code?: string; message?: string } } | undefined)?.error;
       if (apiError?.code && apiError?.message) return new NeuroApiError(apiError.code, apiError.message, error.response?.status);
       if (!error.response) return new NeuroApiError("NETWORK", error.message || "Network error");
       return new NeuroApiError("HTTP_ERROR", `Request failed with status ${error.response.status}`, error.response.status);
@@ -62,15 +65,17 @@ export class NeuroInfoApiClient {
 
   /** Sets the API token for authentication. Pass `null` to remove the token. */
   public setApiToken(token: string | null): void {
-    if (token == null) delete this.apiInstance.defaults.headers.common["Authorization"];
-    else this.apiInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    this.apiToken = token;
   }
 
   /** Generic request wrapper that handles errors consistently. */
   private async request<T>(url: string, params?: Record<string, any>): Promise<ApiResult<T>> {
     try {
-      const response = await this.apiInstance.get(url, params ? { params } : undefined);
-      return { data: response.data, error: null };
+      const response = await this.apiInstance<T>(url, {
+        query: params,
+        headers: this.apiToken != null ? { Authorization: `Bearer ${this.apiToken}` } : undefined,
+      });
+      return { data: response, error: null };
     } catch (error) {
       return { data: null, error: this.parseError(error) };
     }
@@ -194,21 +199,6 @@ export class NeuroInfoApiEventer {
     console.warn("NeuroInfoApiEventer is deprecated. Please use NeuroInfoApiWebsocketClient for real-time updates instead.");
   }
 
-  private emitInternalError(error: unknown): void {
-    const parsed = error instanceof NeuroApiError ? error : new NeuroApiError("EVENT_LOOP_ERROR", String(error));
-    for (const handlers of this.errorHandlers.values()) {
-      handlers.forEach((handler) => {
-        try {
-          handler(parsed);
-        } catch {}
-      });
-    }
-  }
-
-  private runProcessEvents(): void {
-    void this.processEvents().catch((error) => this.emitInternalError(error));
-  }
-
   private async processEvents() {
     if (this.isProcessing) return;
     this.isProcessing = true;
@@ -229,14 +219,7 @@ export class NeuroInfoApiEventer {
 
       const emitError = (event: ApiClientEvent, error: NeuroApiError) =>
         this.errorHandlers.get(event)?.forEach((handler) => handler(error));
-      const emit = (event: ApiClientEvent, listeners: Set<EventListenerEntry<any>>, data: any) =>
-        listeners.forEach((entry) => {
-          try {
-            entry.callback(data);
-          } catch (error) {
-            emitError(event, new NeuroApiError("LISTENER_ERROR", String(error)));
-          }
-        });
+      const emit = (listeners: Set<EventListenerEntry<any>>, data: any) => listeners.forEach((entry) => entry.callback(data));
       const hasChanged = (cached: any, current: any) => !cached || JSON.stringify(cached) !== JSON.stringify(current);
 
       for (const [event, listeners] of this.eventListeners) {
@@ -255,7 +238,7 @@ export class NeuroInfoApiEventer {
             else if (event === "streamOffline") shouldEmit = cached?.isLive && !strResult.data.isLive;
             else shouldEmit = cached && !(cached?.isLive !== strResult.data.isLive) && hasChanged(cached, strResult.data);
 
-            if (shouldEmit) emit(event, listeners, strResult.data);
+            if (shouldEmit) emit(listeners, strResult.data);
             break;
           }
 
@@ -264,7 +247,7 @@ export class NeuroInfoApiEventer {
               if (scheResult?.error) emitError(event, scheResult.error);
               break;
             }
-            if (hasChanged(this.cached.get("latestSchedule"), scheResult.data)) emit(event, listeners, scheResult.data);
+            if (hasChanged(this.cached.get("latestSchedule"), scheResult.data)) emit(listeners, scheResult.data);
 
             break;
           }
@@ -277,12 +260,12 @@ export class NeuroInfoApiEventer {
 
             for (const sub of subResult.data) {
               const cachedSub = cached?.find((s) => s.year === sub.year);
-              if (hasChanged(cachedSub, sub)) emit(event, listeners, sub);
+              if (hasChanged(cachedSub, sub)) emit(listeners, sub);
             }
 
             if (cached) {
               for (const cachedSub of cached) {
-                if (!subResult.data.find((s) => s.year === cachedSub.year)) emit(event, listeners, { ...cachedSub, isActive: false });
+                if (!subResult.data.find((s) => s.year === cachedSub.year)) emit(listeners, { ...cachedSub, isActive: false });
               }
             }
             break;
@@ -299,7 +282,7 @@ export class NeuroInfoApiEventer {
               for (const goalNumber in sub.goals) {
                 const goal = sub.goals[goalNumber];
                 if (hasChanged(cachedSub?.goals[goalNumber], goal))
-                  emit(event, listeners, { subathon: sub, goal, goalNumber: Number(goalNumber) });
+                  emit(listeners, { subathon: sub, goal, goalNumber: Number(goalNumber) });
               }
             }
             break;
@@ -322,8 +305,8 @@ export class NeuroInfoApiEventer {
   /** Starts the event loop that fetches events at regular intervals. */
   public startEventLoop(): void {
     if (this.fetchTimeout != null) return;
-    this.runProcessEvents();
-    this.fetchTimeout = setInterval(() => this.runProcessEvents(), this.fetchInterval);
+    this.processEvents();
+    this.fetchTimeout = setInterval(() => this.processEvents(), this.fetchInterval);
   }
 
   /** Stops the event loop that fetches events at regular intervals. */
@@ -471,14 +454,9 @@ export class NeuroInfoApiWebsocketClient {
   private reconnectAttempts: number = 0;
   private reconnectTimeout: TimeoutHandle | null = null;
   private isIntentionallyClosed: boolean = false;
-  private heartbeatIntervalHandle: IntervalHandle | null = null;
-  private heartbeatTimeoutHandle: TimeoutHandle | null = null;
-  private pendingHeartbeat: boolean = false;
 
   /** Whether to automatically reconnect on disconnect. Default is true. */
   public autoReconnect: boolean = true;
-  /** Whether to automatically send heartbeat pings while connected. Default is true. */
-  public autoHeartbeat: boolean = true;
 
   private _maxReconnectAttempts: number = 10;
   /** Maximum number of reconnect attempts. Default is 10. Set to 0 for unlimited. */
@@ -498,24 +476,6 @@ export class NeuroInfoApiWebsocketClient {
     this._reconnectBaseDelay = Math.max(100, value);
   }
 
-  private _heartbeatIntervalMs: number = 30000;
-  /** Interval in milliseconds for heartbeat pings. Default is 30000ms. Minimum is 5000ms. */
-  public get heartbeatIntervalMs(): number {
-    return this._heartbeatIntervalMs;
-  }
-  public set heartbeatIntervalMs(value: number) {
-    this._heartbeatIntervalMs = Math.max(5000, value);
-  }
-
-  private _heartbeatTimeoutMs: number = 10000;
-  /** Timeout in milliseconds waiting for a heartbeat pong. Default is 10000ms. Minimum is 1000ms. */
-  public get heartbeatTimeoutMs(): number {
-    return this._heartbeatTimeoutMs;
-  }
-  public set heartbeatTimeoutMs(value: number) {
-    this._heartbeatTimeoutMs = Math.max(1000, value);
-  }
-
   /**
    * Creates a new WebSocket client instance.
    * @param token - Authentication token (required for connection)
@@ -525,9 +485,6 @@ export class NeuroInfoApiWebsocketClient {
     this.token = token;
     this.baseUrl = options.baseUrl ?? `wss://${baseDomain}/api/ws`;
     this.authMethod = options.authMethod ?? "ticket";
-    if (options.autoHeartbeat != null) this.autoHeartbeat = options.autoHeartbeat;
-    if (options.heartbeatIntervalMs != null) this.heartbeatIntervalMs = options.heartbeatIntervalMs;
-    if (options.heartbeatTimeoutMs != null) this.heartbeatTimeoutMs = options.heartbeatTimeoutMs;
     // API base URL for ticket fetching (no version prefix)
     this.apiBaseUrl = options.apiBaseUrl ?? this.baseUrl.replace(/^wss?:\/\//, "https://").replace(/\/api\/ws.*$/, "/api");
   }
@@ -552,10 +509,7 @@ export class NeuroInfoApiWebsocketClient {
     this.token = token;
     if (this.isConnected) {
       this.disconnect();
-      void this.connect().catch((error) => {
-        const parsed = error instanceof NeuroApiError ? error : new NeuroApiError("WS_RECONNECT_ERROR", String(error));
-        this.emitSystem("_error", parsed);
-      });
+      this.connect();
     }
   }
 
@@ -622,7 +576,6 @@ export class NeuroInfoApiWebsocketClient {
             this.sessionId = msg.data.sessionId;
             this.emitSystem("_connected", this.sessionId);
             this.resubscribeEvents();
-            this.startHeartbeat();
             if (!settled) {
               settled = true;
               resolve();
@@ -669,7 +622,6 @@ export class NeuroInfoApiWebsocketClient {
   public disconnect(): void {
     this.isIntentionallyClosed = true;
     this.clearReconnectTimeout();
-    this.stopHeartbeat();
     if (this.websocket) {
       this.websocket.close(1000, "Client disconnect");
       this.websocket = null;
@@ -714,10 +666,6 @@ export class NeuroInfoApiWebsocketClient {
       case "invalid":
         this.emitSystem("_error", new NeuroApiError("WS_INVALID", msg.data.message || msg.data.reason));
         break;
-      case "pong":
-        this.acknowledgeHeartbeat();
-        this.emitSystem("_pong");
-        break;
     }
 
     this.emitSystem("_message", msg);
@@ -737,7 +685,6 @@ export class NeuroInfoApiWebsocketClient {
 
   private handleClose(event: CloseEvent): void {
     this.sessionId = null;
-    this.stopHeartbeat();
     this.emitSystem("_disconnected", event.code, event.reason);
 
     if (!this.isIntentionallyClosed && this.autoReconnect) this.scheduleReconnect();
@@ -775,59 +722,6 @@ export class NeuroInfoApiWebsocketClient {
     }
   }
 
-  private startHeartbeat(): void {
-    this.stopHeartbeat();
-    if (!this.autoHeartbeat) return;
-
-    this.sendHeartbeatPing();
-    this.heartbeatIntervalHandle = setInterval(() => this.sendHeartbeatPing(), this.heartbeatIntervalMs);
-  }
-
-  private stopHeartbeat(): void {
-    if (this.heartbeatIntervalHandle) {
-      clearInterval(this.heartbeatIntervalHandle);
-      this.heartbeatIntervalHandle = null;
-    }
-
-    if (this.heartbeatTimeoutHandle) {
-      clearTimeout(this.heartbeatTimeoutHandle);
-      this.heartbeatTimeoutHandle = null;
-    }
-
-    this.pendingHeartbeat = false;
-  }
-
-  private sendHeartbeatPing(): void {
-    if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) return;
-
-    if (this.pendingHeartbeat) {
-      this.emitSystem("_error", new NeuroApiError("WS_HEARTBEAT_TIMEOUT", "Heartbeat pong timeout"));
-      this.websocket.close(4002, "Heartbeat timeout");
-      return;
-    }
-
-    this.pendingHeartbeat = true;
-    this.sendPing();
-
-    this.heartbeatTimeoutHandle = setTimeout(() => {
-      if (!this.pendingHeartbeat) return;
-      if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) return;
-
-      this.emitSystem("_error", new NeuroApiError("WS_HEARTBEAT_TIMEOUT", "Heartbeat pong timeout"));
-      this.websocket.close(4002, "Heartbeat timeout");
-    }, this.heartbeatTimeoutMs);
-  }
-
-  private acknowledgeHeartbeat(): void {
-    if (!this.pendingHeartbeat) return;
-
-    this.pendingHeartbeat = false;
-    if (this.heartbeatTimeoutHandle) {
-      clearTimeout(this.heartbeatTimeoutHandle);
-      this.heartbeatTimeoutHandle = null;
-    }
-  }
-
   private resubscribeEvents(): void {
     for (const eventType of this.subscribedEvents) {
       this.sendSubscribe(eventType);
@@ -843,10 +737,6 @@ export class NeuroInfoApiWebsocketClient {
 
   private sendUnsubscribe(eventType: WsEventType): void {
     this.send({ type: "removeEvent", data: { eventType } });
-  }
-
-  private sendPing(): void {
-    this.send({ type: "ping" });
   }
 
   private send(message: WsClientMessage): void {
@@ -982,21 +872,6 @@ export interface NeuroInfoApiWebsocketClientOptions {
    *   **Not supported in browsers.**
    */
   authMethod?: "ticket" | "header";
-  /**
-   * Enable client-side ping/pong heartbeat.
-   * Default: `true`
-   */
-  autoHeartbeat?: boolean;
-  /**
-   * Heartbeat ping interval in milliseconds.
-   * Default: `25000` (minimum `5000`).
-   */
-  heartbeatIntervalMs?: number;
-  /**
-   * Heartbeat pong timeout in milliseconds.
-   * Default: `10000` (minimum `1000`).
-   */
-  heartbeatTimeoutMs?: number;
 }
 
 export interface NeuroInfoApiClientOptions {
@@ -1024,7 +899,6 @@ export type WsSystemEvent =
   | "_reconnectFailed"
   | "_error"
   | "_message"
-  | "_pong"
   | "_eventAdded"
   | "_eventRemoved";
 
@@ -1036,7 +910,6 @@ export interface WsSystemEventCallbacks {
   _reconnectFailed: () => void;
   _error: (error: Event | NeuroApiError) => void;
   _message: (message: WsServerMessage) => void;
-  _pong: () => void;
   _eventAdded: (eventType: WsEventType) => void;
   _eventRemoved: (eventType: WsEventType) => void;
 }
@@ -1181,11 +1054,6 @@ interface WsListEventsMessage {
   data: { subscribedEvents: WsEventType[]; availableEvents: WsEventType[] };
 }
 
-interface WsPongMessage {
-  type: "pong";
-  data: Record<string, never>;
-}
-
 interface WsEventMessage<T extends WsEventType = WsEventType> {
   type: "event";
   data: { eventType: T; eventData: WsEventDataMap[T]; timestamp: number };
@@ -1197,7 +1065,6 @@ export type WsServerMessage =
   | WsAddSuccessMessage
   | WsRemoveSuccessMessage
   | WsListEventsMessage
-  | WsPongMessage
   | WsEventMessage;
 
 interface WsAddEventRequest {
@@ -1215,12 +1082,7 @@ interface WsListEventsRequest {
   data: Record<string, never>;
 }
 
-interface WsPingRequest {
-  type: "ping";
-  data?: Record<string, never>;
-}
-
-type WsClientMessage = WsAddEventRequest | WsRemoveEventRequest | WsListEventsRequest | WsPingRequest;
+type WsClientMessage = WsAddEventRequest | WsRemoveEventRequest | WsListEventsRequest;
 
 interface WsEventListenerEntry<T extends WsEventType> {
   callback: (data: WsEventDataMap[T], timestamp: number) => void;

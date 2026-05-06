@@ -25,14 +25,14 @@ A comprehensive TypeScript client that provides full access to all NeuroInfoAPI 
 
 ### Requirements
 
-This file uses the npm package [Axios](https://www.npmjs.com/package/axios) to do the request.<br>
-Install the package with `npm install axios`.
+This file uses the lightweight HTTP client [ofetch](https://www.npmjs.com/package/ofetch) for making requests.<br>
+Install the package with `npm install ofetch`.
 
-Works in browser projects too (Vite/Webpack/Rollup/etc.), as long as `axios` is installed.
+Works in browser projects too (Vite/Webpack/Rollup/etc.), as long as `ofetch` is installed.  
 
-If you don't want to use Axios and prefer `fetch()`, you can ask your favorite local AI to make this change with the following prompt:
+If you prefer `fetch()` (native in browsers & Node.js), you can ask your favorite local AI to make this change with the following prompt:
 ```
-Remove the Axios dependency from NeuroInfoAPI-Client.js and replace it with the standard fetch() API. Ensure performance remains comparable.
+Replace the ofetch-based request layer in NeuroInfoAPI-Client.{js,ts} with the native fetch() API. Ensure performance remains comparable.
 ```  
 
 ### Quick Start

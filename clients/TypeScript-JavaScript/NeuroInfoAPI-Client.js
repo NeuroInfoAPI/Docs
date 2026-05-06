@@ -1,4 +1,4 @@
-import axios, { isAxiosError } from "axios";
+import { FetchError, ofetch } from "ofetch";
 const baseDomain = "neuro.appstun.net";
 /**
  * Custom error class for API errors with code and status information.
@@ -22,6 +22,7 @@ export class NeuroInfoApiClient {
      * @param options - Optional configuration options
      */
     constructor(token = undefined, options = {}) {
+        this.apiToken = null;
         /**
          * Fetches the current stream data.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#current-stream-status-1
@@ -81,12 +82,13 @@ export class NeuroInfoApiClient {
          */
         this.getSubathon = (year) => this.request("/subathon", { year });
         /**
-         * Fetches the Neuro-sama blog feed.
+         * Fetches the Neuro-sama blog feed. Requires an API token.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/blog.md#endpoint
          */
         this.getBlogFeed = (raw = false) => this.request("/blog/feed", raw ? { raw: true } : undefined);
-        this.apiInstance = axios.create({
-            baseURL: options.baseUrl ?? `https://${baseDomain}/api/v1`,
+        this.baseUrl = options.baseUrl ?? `https://${baseDomain}/api/v1`;
+        this.apiInstance = ofetch.create({
+            baseURL: this.baseUrl,
             timeout: 10000,
             headers: {
                 "Content-Type": "application/json",
@@ -99,8 +101,8 @@ export class NeuroInfoApiClient {
      * Parses an error into a NeuroApiError with proper code and message.
      */
     parseError(error) {
-        if (isAxiosError(error)) {
-            const apiError = error.response?.data?.error;
+        if (error instanceof FetchError) {
+            const apiError = error.data?.error;
             if (apiError?.code && apiError?.message)
                 return new NeuroApiError(apiError.code, apiError.message, error.response?.status);
             if (!error.response)
@@ -111,16 +113,16 @@ export class NeuroInfoApiClient {
     }
     /** Sets the API token for authentication. Pass `null` to remove the token. */
     setApiToken(token) {
-        if (token == null)
-            delete this.apiInstance.defaults.headers.common["Authorization"];
-        else
-            this.apiInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        this.apiToken = token;
     }
     /** Generic request wrapper that handles errors consistently. */
     async request(url, params) {
         try {
-            const response = await this.apiInstance.get(url, params ? { params } : undefined);
-            return { data: response.data, error: null };
+            const response = await this.apiInstance(url, {
+                query: params,
+                headers: this.apiToken != null ? { Authorization: `Bearer ${this.apiToken}` } : undefined,
+            });
+            return { data: response, error: null };
         }
         catch (error) {
             return { data: null, error: this.parseError(error) };
@@ -154,20 +156,6 @@ export class NeuroInfoApiEventer {
         this.client = new NeuroInfoApiClient();
         console.warn("NeuroInfoApiEventer is deprecated. Please use NeuroInfoApiWebsocketClient for real-time updates instead.");
     }
-    emitInternalError(error) {
-        const parsed = error instanceof NeuroApiError ? error : new NeuroApiError("EVENT_LOOP_ERROR", String(error));
-        for (const handlers of this.errorHandlers.values()) {
-            handlers.forEach((handler) => {
-                try {
-                    handler(parsed);
-                }
-                catch { }
-            });
-        }
-    }
-    runProcessEvents() {
-        void this.processEvents().catch((error) => this.emitInternalError(error));
-    }
     async processEvents() {
         if (this.isProcessing)
             return;
@@ -186,14 +174,7 @@ export class NeuroInfoApiEventer {
                 await delay(100);
             const subResult = needsSubathon ? await this.client.getCurrentSubathons() : null;
             const emitError = (event, error) => this.errorHandlers.get(event)?.forEach((handler) => handler(error));
-            const emit = (event, listeners, data) => listeners.forEach((entry) => {
-                try {
-                    entry.callback(data);
-                }
-                catch (error) {
-                    emitError(event, new NeuroApiError("LISTENER_ERROR", String(error)));
-                }
-            });
+            const emit = (listeners, data) => listeners.forEach((entry) => entry.callback(data));
             const hasChanged = (cached, current) => !cached || JSON.stringify(cached) !== JSON.stringify(current);
             for (const [event, listeners] of this.eventListeners) {
                 switch (event) {
@@ -214,7 +195,7 @@ export class NeuroInfoApiEventer {
                         else
                             shouldEmit = cached && !(cached?.isLive !== strResult.data.isLive) && hasChanged(cached, strResult.data);
                         if (shouldEmit)
-                            emit(event, listeners, strResult.data);
+                            emit(listeners, strResult.data);
                         break;
                     }
                     case "scheduleUpdate": {
@@ -224,7 +205,7 @@ export class NeuroInfoApiEventer {
                             break;
                         }
                         if (hasChanged(this.cached.get("latestSchedule"), scheResult.data))
-                            emit(event, listeners, scheResult.data);
+                            emit(listeners, scheResult.data);
                         break;
                     }
                     case "subathonUpdate": {
@@ -237,12 +218,12 @@ export class NeuroInfoApiEventer {
                         for (const sub of subResult.data) {
                             const cachedSub = cached?.find((s) => s.year === sub.year);
                             if (hasChanged(cachedSub, sub))
-                                emit(event, listeners, sub);
+                                emit(listeners, sub);
                         }
                         if (cached) {
                             for (const cachedSub of cached) {
                                 if (!subResult.data.find((s) => s.year === cachedSub.year))
-                                    emit(event, listeners, { ...cachedSub, isActive: false });
+                                    emit(listeners, { ...cachedSub, isActive: false });
                             }
                         }
                         break;
@@ -259,7 +240,7 @@ export class NeuroInfoApiEventer {
                             for (const goalNumber in sub.goals) {
                                 const goal = sub.goals[goalNumber];
                                 if (hasChanged(cachedSub?.goals[goalNumber], goal))
-                                    emit(event, listeners, { subathon: sub, goal, goalNumber: Number(goalNumber) });
+                                    emit(listeners, { subathon: sub, goal, goalNumber: Number(goalNumber) });
                             }
                         }
                         break;
@@ -284,8 +265,8 @@ export class NeuroInfoApiEventer {
     startEventLoop() {
         if (this.fetchTimeout != null)
             return;
-        this.runProcessEvents();
-        this.fetchTimeout = setInterval(() => this.runProcessEvents(), this.fetchInterval);
+        this.processEvents();
+        this.fetchTimeout = setInterval(() => this.processEvents(), this.fetchInterval);
     }
     /** Stops the event loop that fetches events at regular intervals. */
     stopEventLoop() {
@@ -420,20 +401,6 @@ export class NeuroInfoApiWebsocketClient {
     set reconnectBaseDelay(value) {
         this._reconnectBaseDelay = Math.max(100, value);
     }
-    /** Interval in milliseconds for heartbeat pings. Default is 30000ms. Minimum is 5000ms. */
-    get heartbeatIntervalMs() {
-        return this._heartbeatIntervalMs;
-    }
-    set heartbeatIntervalMs(value) {
-        this._heartbeatIntervalMs = Math.max(5000, value);
-    }
-    /** Timeout in milliseconds waiting for a heartbeat pong. Default is 10000ms. Minimum is 1000ms. */
-    get heartbeatTimeoutMs() {
-        return this._heartbeatTimeoutMs;
-    }
-    set heartbeatTimeoutMs(value) {
-        this._heartbeatTimeoutMs = Math.max(1000, value);
-    }
     /**
      * Creates a new WebSocket client instance.
      * @param token - Authentication token (required for connection)
@@ -449,26 +416,13 @@ export class NeuroInfoApiWebsocketClient {
         this.reconnectAttempts = 0;
         this.reconnectTimeout = null;
         this.isIntentionallyClosed = false;
-        this.heartbeatIntervalHandle = null;
-        this.heartbeatTimeoutHandle = null;
-        this.pendingHeartbeat = false;
         /** Whether to automatically reconnect on disconnect. Default is true. */
         this.autoReconnect = true;
-        /** Whether to automatically send heartbeat pings while connected. Default is true. */
-        this.autoHeartbeat = true;
         this._maxReconnectAttempts = 10;
         this._reconnectBaseDelay = 1000;
-        this._heartbeatIntervalMs = 30000;
-        this._heartbeatTimeoutMs = 10000;
         this.token = token;
         this.baseUrl = options.baseUrl ?? `wss://${baseDomain}/api/ws`;
         this.authMethod = options.authMethod ?? "ticket";
-        if (options.autoHeartbeat != null)
-            this.autoHeartbeat = options.autoHeartbeat;
-        if (options.heartbeatIntervalMs != null)
-            this.heartbeatIntervalMs = options.heartbeatIntervalMs;
-        if (options.heartbeatTimeoutMs != null)
-            this.heartbeatTimeoutMs = options.heartbeatTimeoutMs;
         // API base URL for ticket fetching (no version prefix)
         this.apiBaseUrl = options.apiBaseUrl ?? this.baseUrl.replace(/^wss?:\/\//, "https://").replace(/\/api\/ws.*$/, "/api");
     }
@@ -489,10 +443,7 @@ export class NeuroInfoApiWebsocketClient {
         this.token = token;
         if (this.isConnected) {
             this.disconnect();
-            void this.connect().catch((error) => {
-                const parsed = error instanceof NeuroApiError ? error : new NeuroApiError("WS_RECONNECT_ERROR", String(error));
-                this.emitSystem("_error", parsed);
-            });
+            this.connect();
         }
     }
     /**
@@ -553,7 +504,6 @@ export class NeuroInfoApiWebsocketClient {
                         this.sessionId = msg.data.sessionId;
                         this.emitSystem("_connected", this.sessionId);
                         this.resubscribeEvents();
-                        this.startHeartbeat();
                         if (!settled) {
                             settled = true;
                             resolve();
@@ -595,7 +545,6 @@ export class NeuroInfoApiWebsocketClient {
     disconnect() {
         this.isIntentionallyClosed = true;
         this.clearReconnectTimeout();
-        this.stopHeartbeat();
         if (this.websocket) {
             this.websocket.close(1000, "Client disconnect");
             this.websocket = null;
@@ -636,10 +585,6 @@ export class NeuroInfoApiWebsocketClient {
             case "invalid":
                 this.emitSystem("_error", new NeuroApiError("WS_INVALID", msg.data.message || msg.data.reason));
                 break;
-            case "pong":
-                this.acknowledgeHeartbeat();
-                this.emitSystem("_pong");
-                break;
         }
         this.emitSystem("_message", msg);
     }
@@ -657,7 +602,6 @@ export class NeuroInfoApiWebsocketClient {
     }
     handleClose(event) {
         this.sessionId = null;
-        this.stopHeartbeat();
         this.emitSystem("_disconnected", event.code, event.reason);
         if (!this.isIntentionallyClosed && this.autoReconnect)
             this.scheduleReconnect();
@@ -688,52 +632,6 @@ export class NeuroInfoApiWebsocketClient {
             this.reconnectTimeout = null;
         }
     }
-    startHeartbeat() {
-        this.stopHeartbeat();
-        if (!this.autoHeartbeat)
-            return;
-        this.sendHeartbeatPing();
-        this.heartbeatIntervalHandle = setInterval(() => this.sendHeartbeatPing(), this.heartbeatIntervalMs);
-    }
-    stopHeartbeat() {
-        if (this.heartbeatIntervalHandle) {
-            clearInterval(this.heartbeatIntervalHandle);
-            this.heartbeatIntervalHandle = null;
-        }
-        if (this.heartbeatTimeoutHandle) {
-            clearTimeout(this.heartbeatTimeoutHandle);
-            this.heartbeatTimeoutHandle = null;
-        }
-        this.pendingHeartbeat = false;
-    }
-    sendHeartbeatPing() {
-        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN)
-            return;
-        if (this.pendingHeartbeat) {
-            this.emitSystem("_error", new NeuroApiError("WS_HEARTBEAT_TIMEOUT", "Heartbeat pong timeout"));
-            this.websocket.close(4002, "Heartbeat timeout");
-            return;
-        }
-        this.pendingHeartbeat = true;
-        this.sendPing();
-        this.heartbeatTimeoutHandle = setTimeout(() => {
-            if (!this.pendingHeartbeat)
-                return;
-            if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN)
-                return;
-            this.emitSystem("_error", new NeuroApiError("WS_HEARTBEAT_TIMEOUT", "Heartbeat pong timeout"));
-            this.websocket.close(4002, "Heartbeat timeout");
-        }, this.heartbeatTimeoutMs);
-    }
-    acknowledgeHeartbeat() {
-        if (!this.pendingHeartbeat)
-            return;
-        this.pendingHeartbeat = false;
-        if (this.heartbeatTimeoutHandle) {
-            clearTimeout(this.heartbeatTimeoutHandle);
-            this.heartbeatTimeoutHandle = null;
-        }
-    }
     resubscribeEvents() {
         for (const eventType of this.subscribedEvents) {
             this.sendSubscribe(eventType);
@@ -747,9 +645,6 @@ export class NeuroInfoApiWebsocketClient {
     }
     sendUnsubscribe(eventType) {
         this.send({ type: "removeEvent", data: { eventType } });
-    }
-    sendPing() {
-        this.send({ type: "ping" });
     }
     send(message) {
         if (this.websocket?.readyState === WebSocket.OPEN)
