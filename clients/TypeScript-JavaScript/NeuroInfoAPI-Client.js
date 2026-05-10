@@ -401,6 +401,20 @@ export class NeuroInfoApiWebsocketClient {
     set reconnectBaseDelay(value) {
         this._reconnectBaseDelay = Math.max(100, value);
     }
+    /** Interval in milliseconds for heartbeat pings. Default is 30000ms. Minimum is 5000ms. */
+    get heartbeatIntervalMs() {
+        return this._heartbeatIntervalMs;
+    }
+    set heartbeatIntervalMs(value) {
+        this._heartbeatIntervalMs = Math.max(5000, value);
+    }
+    /** Timeout in milliseconds waiting for a heartbeat pong. Default is 10000ms. Minimum is 1000ms. */
+    get heartbeatTimeoutMs() {
+        return this._heartbeatTimeoutMs;
+    }
+    set heartbeatTimeoutMs(value) {
+        this._heartbeatTimeoutMs = Math.max(1000, value);
+    }
     /**
      * Creates a new WebSocket client instance.
      * @param token - Authentication token (required for connection)
@@ -416,13 +430,26 @@ export class NeuroInfoApiWebsocketClient {
         this.reconnectAttempts = 0;
         this.reconnectTimeout = null;
         this.isIntentionallyClosed = false;
+        this.heartbeatIntervalHandle = null;
+        this.heartbeatTimeoutHandle = null;
+        this.pendingHeartbeat = false;
         /** Whether to automatically reconnect on disconnect. Default is true. */
         this.autoReconnect = true;
+        /** Whether to automatically send heartbeat pings while connected. Default is true. */
+        this.autoHeartbeat = true;
         this._maxReconnectAttempts = 10;
         this._reconnectBaseDelay = 1000;
+        this._heartbeatIntervalMs = 30000;
+        this._heartbeatTimeoutMs = 10000;
         this.token = token;
         this.baseUrl = options.baseUrl ?? `wss://${baseDomain}/api/ws`;
         this.authMethod = options.authMethod ?? "ticket";
+        if (options.autoHeartbeat != null)
+            this.autoHeartbeat = options.autoHeartbeat;
+        if (options.heartbeatIntervalMs != null)
+            this.heartbeatIntervalMs = options.heartbeatIntervalMs;
+        if (options.heartbeatTimeoutMs != null)
+            this.heartbeatTimeoutMs = options.heartbeatTimeoutMs;
         // API base URL for ticket fetching (no version prefix)
         this.apiBaseUrl = options.apiBaseUrl ?? this.baseUrl.replace(/^wss?:\/\//, "https://").replace(/\/api\/ws.*$/, "/api");
     }
@@ -504,6 +531,7 @@ export class NeuroInfoApiWebsocketClient {
                         this.sessionId = msg.data.sessionId;
                         this.emitSystem("_connected", this.sessionId);
                         this.resubscribeEvents();
+                        this.startHeartbeat();
                         if (!settled) {
                             settled = true;
                             resolve();
@@ -545,6 +573,7 @@ export class NeuroInfoApiWebsocketClient {
     disconnect() {
         this.isIntentionallyClosed = true;
         this.clearReconnectTimeout();
+        this.stopHeartbeat();
         if (this.websocket) {
             this.websocket.close(1000, "Client disconnect");
             this.websocket = null;
@@ -585,6 +614,10 @@ export class NeuroInfoApiWebsocketClient {
             case "invalid":
                 this.emitSystem("_error", new NeuroApiError("WS_INVALID", msg.data.message || msg.data.reason));
                 break;
+            case "pong":
+                this.acknowledgeHeartbeat();
+                this.emitSystem("_pong");
+                break;
         }
         this.emitSystem("_message", msg);
     }
@@ -601,6 +634,7 @@ export class NeuroInfoApiWebsocketClient {
         });
     }
     handleClose(event) {
+        this.stopHeartbeat();
         this.sessionId = null;
         this.emitSystem("_disconnected", event.code, event.reason);
         if (!this.isIntentionallyClosed && this.autoReconnect)
@@ -631,6 +665,55 @@ export class NeuroInfoApiWebsocketClient {
             clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = null;
         }
+    }
+    startHeartbeat() {
+        this.stopHeartbeat();
+        if (!this.autoHeartbeat)
+            return;
+        this.sendHeartbeatPing();
+        this.heartbeatIntervalHandle = setInterval(() => this.sendHeartbeatPing(), this.heartbeatIntervalMs);
+    }
+    stopHeartbeat() {
+        if (this.heartbeatIntervalHandle) {
+            clearInterval(this.heartbeatIntervalHandle);
+            this.heartbeatIntervalHandle = null;
+        }
+        if (this.heartbeatTimeoutHandle) {
+            clearTimeout(this.heartbeatTimeoutHandle);
+            this.heartbeatTimeoutHandle = null;
+        }
+        this.pendingHeartbeat = false;
+    }
+    sendHeartbeatPing() {
+        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN)
+            return;
+        if (this.pendingHeartbeat) {
+            this.emitSystem("_error", new NeuroApiError("WS_HEARTBEAT_TIMEOUT", "Heartbeat pong timeout"));
+            this.websocket.close(4002, "Heartbeat timeout");
+            return;
+        }
+        this.pendingHeartbeat = true;
+        this.sendPing();
+        this.heartbeatTimeoutHandle = setTimeout(() => {
+            if (!this.pendingHeartbeat)
+                return;
+            if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN)
+                return;
+            this.emitSystem("_error", new NeuroApiError("WS_HEARTBEAT_TIMEOUT", "Heartbeat pong timeout"));
+            this.websocket.close(4002, "Heartbeat timeout");
+        }, this.heartbeatTimeoutMs);
+    }
+    acknowledgeHeartbeat() {
+        if (!this.pendingHeartbeat)
+            return;
+        this.pendingHeartbeat = false;
+        if (this.heartbeatTimeoutHandle) {
+            clearTimeout(this.heartbeatTimeoutHandle);
+            this.heartbeatTimeoutHandle = null;
+        }
+    }
+    sendPing() {
+        this.send({ type: "ping", data: {} });
     }
     resubscribeEvents() {
         for (const eventType of this.subscribedEvents) {
