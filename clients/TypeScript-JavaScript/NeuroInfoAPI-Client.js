@@ -1,5 +1,27 @@
 import { FetchError, ofetch } from "ofetch";
 const baseDomain = "neuro.appstun.net";
+// Boot check: fires once when any v1 client is constructed
+let bootCheckFired = false;
+async function bootCheck(baseUrlOrApiBase) {
+    if (bootCheckFired)
+        return;
+    bootCheckFired = true;
+    try {
+        const infoUrl = `${baseUrlOrApiBase.replace(/\/api\/v\d+.*$/, "/api")}/info`;
+        const resp = await fetch(infoUrl);
+        if (!resp.ok)
+            return;
+        const json = await resp.json();
+        const v1Status = json?.data?.versions?.v1;
+        const date = v1Status?.sunset ? new Date(v1Status.sunset) : null;
+        if (v1Status?.status === "deprecated") {
+            console.warn(`\x1b[33m--- NeuroInfoAPI v1 is deprecated and will be turned off${date ? ` on ${date.toISOString()}` : ""}. Please update to v2. ---\x1b[0m`);
+        }
+    }
+    catch {
+        // Silently ignore — boot check is non-critical
+    }
+}
 /**
  * Custom error class for API errors with code and status information.
  */
@@ -96,6 +118,9 @@ export class NeuroInfoApiClient {
         });
         if (token != null)
             this.setApiToken(token);
+        // Boot check: warn if using deprecated v1
+        if (this.baseUrl.includes("/api/v1"))
+            bootCheck(this.baseUrl);
     }
     /**
      * Parses an error into a NeuroApiError with proper code and message.
@@ -452,6 +477,9 @@ export class NeuroInfoApiWebsocketClient {
             this.heartbeatTimeoutMs = options.heartbeatTimeoutMs;
         // API base URL for ticket fetching (no version prefix)
         this.apiBaseUrl = options.apiBaseUrl ?? this.baseUrl.replace(/^wss?:\/\//, "https://").replace(/\/api\/ws.*$/, "/api");
+        // Boot check: warn if using deprecated v1 (check both baseUrl and apiBaseUrl)
+        if (this.baseUrl.includes("/api/v1") || this.apiBaseUrl.includes("/api/v1"))
+            bootCheck(this.apiBaseUrl);
     }
     /** Returns the current connection state. */
     get readyState() {
