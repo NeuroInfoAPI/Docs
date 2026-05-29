@@ -6,7 +6,7 @@
 
 > [!NOTE]
 > Video on Demand (VOD) and stream informations are fetched straight from the Twitch API but is stored in a cache. <br>
-> The stream info updates every 30 seconds and the VOD list in the database every 2 hours.
+> The stream info updates every 10 seconds and the VOD list in the database every 2 hours.
 
 ### Current Stream Status
 
@@ -254,6 +254,6 @@ Authorization: Bearer YOUR_API_TOKEN
 
 ## Other Notes
 
-- Stream data is cached for 30 seconds
+- Stream data is cached for 10 seconds
 - VOD data is cached for 15 minutes (all VODs) to 1 hour (specific VOD)
 - All Twitch endpoints have rate limiting applied, VOD endpoints require valid API authentication
