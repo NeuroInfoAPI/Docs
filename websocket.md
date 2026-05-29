@@ -344,4 +344,3 @@ Possible `reason` values:
 - `blogFeedUpdate` broadcasts only changed or newly added entries
 - Keepalive pings are enabled; idle timeout is 60 seconds
 - For lightweight client-side liveness checks, prefer `ping`/`pong` over `listEvents`
-- WebSocket uses the next port after the HTTP API server (typically API port + 1)

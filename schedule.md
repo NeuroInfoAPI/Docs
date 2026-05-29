@@ -338,13 +338,7 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 | `hasActiveSubathon` | boolean | Whether there is an active subathon running        | Only on `/latest` |
 
 > [!NOTE]
-> Schedule collection & finalization:
->
-> - Fetched from Twitch Schedule fetching and a announcements channel\* on the Neuro-sama Discord server.
-> - Twitch fetching stops on first detected change and also stops when a announcement gets posted; results may be incomplete.
-> - Auto-fetched schedules: `"isFinal": false`. Then after manual confirmation: `"isFinal": true`. <br>
-
-<small>\* The schedules are fetched from a private channel that follows the announcement channel on the Neuro-sama Discord server (messages are forwarded from the latter to the private channel).</small>
+> `"isFinal": false` = auto-collected (may be incomplete). `"isFinal": true` = manually confirmed as final.
 
 ## Error Responses
 
