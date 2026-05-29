@@ -3,6 +3,49 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [29.05.2026]
+
+### Changed
+
+- Changed and removed nonsensical texts/info ([blog.md](blog.md), [schedule.md](schedule.md), [websocket.md](websocket.md))
+- Updated `/twitch/stream check interval / cache from 20 econds to 10 seconds ([twitch.md](twitch.md))
+
+
+## [28.05.2026]
+
+### Added
+
+- Added api version check on boot up to TS/JS client ([NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts))
+
+
+## [10.05.2026]
+
+### Changed
+
+- Updated TypeScript/JavaScript client and restored WebSocket heartbeat support.
+
+
+## [06.05.2026]
+
+### Changed
+
+- Switched the TypeScript/JavaScript client request layer to `ofetch`.
+- Updated TypeScript/JavaScript client README for the new request dependency.
+
+
+## [04.05.2026]
+
+### Added
+
+- Added Neuro-sama blog feed documentation ([blog.md](blog.md)).
+- Added blog feed endpoint references to README, quick reference, authentication overview, and error docs.
+- Added blog feed support to the TypeScript/JavaScript client.
+- Added WebSocket blog feed update documentation.
+
+### Changed
+
+- Updated schedule, quick reference, and WebSocket docs for blog feed integration.
+
 
 ## [21.04.2026]
 
@@ -188,3 +231,4 @@ It's definitely time to write a changelog for "important" changes to the docs. <
 ### Added
 
 - Added TS client & docs ([NeuroInfoAPI-Client](clients/NeuroInfoAPI-Client.ts); [clients/README.md](clients/README.md); [README.md](README.md))
+
