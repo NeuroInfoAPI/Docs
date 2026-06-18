@@ -29,16 +29,6 @@ This guide covers changes in `NeuroInfoAPI-Client.ts` / `.js` when upgrading fro
 | Response unwrapping | None                               | Unwraps `{ data: T }`                            |
 | HTTP dependency     | Older external helper              | Built-in `HttpClient` on top of standard `fetch` |
 
-### Staying on v1 temporarily
-
-```typescript
-import { NeuroInfoApiClient } from "./NeuroInfoAPI-Client";
-
-const client = new NeuroInfoApiClient("your-token", {
-  baseUrl: "https://neuro.appstun.net/api/v1",
-});
-```
-
 ## `request()` and `ApiResult<T>`
 
 The client still returns `{ data, error }` — that is the client result type, not the HTTP envelope.
