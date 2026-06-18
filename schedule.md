@@ -9,27 +9,27 @@
 
 ### Specific Weekly Schedule
 
-`GET https://neuro.appstun.net/api/v1/schedule`
+`GET https://neuro.appstun.net/api/v2/schedule`
 
 ### Latest Weekly Schedule
 
-`GET https://neuro.appstun.net/api/v1/schedule/latest`
+`GET https://neuro.appstun.net/api/v2/schedule/latest`
 
 ### Search Weekly Schedules
 
-`GET https://neuro.appstun.net/api/v1/schedule/search`
+`GET https://neuro.appstun.net/api/v2/schedule/search`
 
 ### Devstream Times
 
-`GET https://neuro.appstun.net/api/v1/schedule/devstreamtimes`
+`GET https://neuro.appstun.net/api/v2/devstream/times`
 
 ### Schedule Weeks Index
 
-`GET https://neuro.appstun.net/api/v1/schedule/weeks`
+`GET https://neuro.appstun.net/api/v2/schedule/weeks`
 
 ## Description
 
-Access weekly schedule data from the database. Use the specific-week endpoint for exact calendar weeks, the latest endpoint for the most recent published schedule, the search endpoint for message-based lookups with cursor pagination, the weeks endpoint to list available weeks per year, and the devstream endpoint for historical devstream timestamps.
+Access weekly schedule data from the database. Use the specific-week endpoint for exact calendar weeks, the latest endpoint for the most recent published schedule, the search endpoint for message-based lookups with cursor pagination, and the weeks endpoint to list available weeks per year. For devstream timestamps, see [Devstream Times](#devstream-times) below.
 
 ## Endpoints Details
 
@@ -37,7 +37,7 @@ Access weekly schedule data from the database. Use the specific-week endpoint fo
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v1/schedule`
+`GET https://neuro.appstun.net/api/v2/schedule`
 
 #### Description
 
@@ -60,10 +60,10 @@ Get a weekly schedule from the database for a given week and year.
 #### Request Examples
 
 ```http
-GET https://neuro.appstun.net/api/v1/schedule?week=25&year=2024
+GET https://neuro.appstun.net/api/v2/schedule?week=25&year=2024
 Authorization: Bearer YOUR_API_TOKEN
 
-GET https://neuro.appstun.net/api/v1/schedule?week=25
+GET https://neuro.appstun.net/api/v2/schedule?week=25
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -73,35 +73,19 @@ Authorization: Bearer YOUR_API_TOKEN
 
 ```json
 {
-  "year": 2024,
-  "week": 25,
-  "schedule": [
-    {
-      "day": 0,
-      "time": 1719475200000,
-      "message": "Neuro-sama Stream",
-      "type": "normal"
-    },
-    {
-      "day": 1,
-      "time": 1719561600000,
-      "message": "Evil-sama Stream",
-      "type": "normal"
-    },
-    {
-      "day": 2,
-      "time": 1719648000000,
-      "message": "Offline Day",
-      "type": "offline"
-    },
-    {
-      "day": 3,
-      "time": 1719734400000,
-      "message": "TBD Stream",
-      "type": "TBD"
-    }
-  ],
-  "isFinal": true
+  "data": {
+    "year": 2024,
+    "week": 25,
+    "schedule": [
+      {
+        "day": 0,
+        "time": 1719475200000,
+        "message": "Neuro-sama Stream",
+        "type": "normal"
+      }
+    ],
+    "status": "confirmed"
+  }
 }
 ```
 
@@ -109,7 +93,7 @@ Authorization: Bearer YOUR_API_TOKEN
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v1/schedule/latest`
+`GET https://neuro.appstun.net/api/v2/schedule/latest`
 
 #### Description
 
@@ -126,7 +110,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v1/schedule/latest
+GET https://neuro.appstun.net/api/v2/schedule/latest
 ```
 
 #### Response Format
@@ -135,19 +119,15 @@ GET https://neuro.appstun.net/api/v1/schedule/latest
 
 ```json
 {
-  "year": 2025,
-  "week": 42,
-  "schedule": [
-    { "day": 2, "time": 1760464800000, "message": "Neuro Stream", "type": "normal" },
-    { "day": 3, "time": 1760551200000, "message": "Neuro Karaoke", "type": "canceled" },
-    { "day": 4, "time": 1760637600000, "message": "Evil Stream", "type": "normal" },
-    { "day": 5, "time": 1760724000000, "message": "Neuro Fishing 2", "type": "TBD" },
-    { "day": 6, "time": 1760810400000, "message": "Offline", "type": "offline" },
-    { "day": 0, "time": 1760896800000, "message": "Offline", "type": "offline" },
-    { "day": 1, "time": 1760983200000, "message": "Offline", "type": "offline" }
-  ],
-  "isFinal": true,
-  "hasActiveSubathon": false
+  "data": {
+    "year": 2025,
+    "week": 42,
+    "schedule": [
+      { "day": 2, "time": 1760464800000, "message": "Neuro Stream", "type": "normal" }
+    ],
+    "status": "confirmed",
+    "hasActiveSubathon": false
+  }
 }
 ```
 
@@ -155,7 +135,7 @@ GET https://neuro.appstun.net/api/v1/schedule/latest
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v1/schedule/search`
+`GET https://neuro.appstun.net/api/v2/schedule/search`
 
 #### Description
 
@@ -183,13 +163,13 @@ Searches schedule messages (for example: "karaoke", "offline", or game names) an
 #### Request Examples
 
 ```http
-GET https://neuro.appstun.net/api/v1/schedule/search?query=karaoke&limit=5&sort=desc
+GET https://neuro.appstun.net/api/v2/schedule/search?query=karaoke&limit=5&sort=desc
 Authorization: Bearer YOUR_API_TOKEN
 
-GET https://neuro.appstun.net/api/v1/schedule/search?query=stream&type=normal&limit=10
+GET https://neuro.appstun.net/api/v2/schedule/search?query=stream&type=normal&limit=10
 Authorization: Bearer YOUR_API_TOKEN
 
-GET https://neuro.appstun.net/api/v1/schedule/search?query=karaoke&limit=5&sort=desc&cursorYear=2026&cursorWeek=9
+GET https://neuro.appstun.net/api/v2/schedule/search?query=karaoke&limit=5&sort=desc&cursorYear=2026&cursorWeek=9
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -199,28 +179,30 @@ Authorization: Bearer YOUR_API_TOKEN
 
 ```json
 {
-  "nextCursor": {
-    "year": 2026,
-    "week": 8
-  },
-  "results": [
-    {
-      "foundDays": [1, 4],
-      "data": {
-        "year": 2026,
-        "week": 9,
-        "schedule": [
-          {
-            "day": 1,
-            "time": 1772294400000,
-            "message": "Neuro Karaoke",
-            "type": "normal"
-          }
-        ],
-        "isFinal": true
+  "data": {
+    "nextCursor": {
+      "year": 2026,
+      "week": 8
+    },
+    "results": [
+      {
+        "foundDays": [1, 4],
+        "data": {
+          "year": 2026,
+          "week": 9,
+          "schedule": [
+            {
+              "day": 1,
+              "time": 1772294400000,
+              "message": "Neuro Karaoke",
+              "type": "normal"
+            }
+          ],
+          "status": "confirmed"
+        }
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
@@ -228,25 +210,27 @@ Authorization: Bearer YOUR_API_TOKEN
 
 ```json
 {
-  "nextCursor": null,
-  "results": [
-    {
-      "foundDays": [2],
-      "data": {
-        "year": 2024,
-        "week": 43,
-        "schedule": [
-          {
-            "day": 2,
-            "time": 1729641600000,
-            "message": "Karaoke stream",
-            "type": "normal"
-          }
-        ],
-        "isFinal": true
+  "data": {
+    "nextCursor": null,
+    "results": [
+      {
+        "foundDays": [2],
+        "data": {
+          "year": 2024,
+          "week": 43,
+          "schedule": [
+            {
+              "day": 2,
+              "time": 1729641600000,
+              "message": "Karaoke stream",
+              "type": "normal"
+            }
+          ],
+          "status": "confirmed"
+        }
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
@@ -254,7 +238,7 @@ Authorization: Bearer YOUR_API_TOKEN
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v1/schedule/devstreamtimes`
+`GET https://neuro.appstun.net/api/v2/devstream/times`
 
 #### Description
 
@@ -271,7 +255,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v1/schedule/devstreamtimes
+GET https://neuro.appstun.net/api/v2/devstream/times
 ```
 
 #### Response Format
@@ -279,14 +263,16 @@ GET https://neuro.appstun.net/api/v1/schedule/devstreamtimes
 ##### Success Response (200)
 
 ```json
-[1723680000000, 1723939200000, 1724198400000]
+{
+  "data": [1723680000000, 1723939200000, 1724198400000]
+}
 ```
 
 ### Schedule Weeks Index
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v1/schedule/weeks`
+`GET https://neuro.appstun.net/api/v2/schedule/weeks`
 
 #### Description
 
@@ -303,7 +289,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v1/schedule/weeks
+GET https://neuro.appstun.net/api/v2/schedule/weeks
 ```
 
 #### Response Format
@@ -312,9 +298,11 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 
 ```json
 {
-  "2023": [11, 12, 13, 14],
-  "2024": [1, 2, 3, 4, 5],
-  "2025": [38, 39, 40, 41, 42]
+  "data": {
+    "2023": [11, 12, 13, 14],
+    "2024": [1, 2, 3, 4, 5],
+    "2025": [38, 39, 40, 41, 42]
+  }
 }
 ```
 
@@ -329,48 +317,36 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 
 #### Response Properties
 
-| Property            | Type    | Description                                        | Always included   |
-| ------------------- | ------- | -------------------------------------------------- | ----------------- |
-| `year`              | number  | Year of the schedule                               | Yes               |
-| `week`              | number  | Calendar week number (1-53)                        | Yes               |
-| `schedule`          | array   | Array of schedule entries (see above)              | Yes               |
-| `isFinal`           | boolean | Whether this schedule is considered final/complete | Yes               |
-| `hasActiveSubathon` | boolean | Whether there is an active subathon running        | Only on `/latest` |
+| Property            | Type    | Description                                                    | Always included   |
+| ------------------- | ------- | -------------------------------------------------------------- | ----------------- |
+| `year`              | number  | Year of the schedule                                           | Yes               |
+| `week`              | number  | Calendar week number (1-53)                                    | Yes               |
+| `schedule`          | array   | Array of schedule entries (see above)                          | Yes               |
+| `status`            | string  | Schedule status: `auto_twitch`, `auto_discord`, or `confirmed` | Yes               |
+| `hasActiveSubathon` | boolean | Whether there is an active subathon running                    | Only on `/latest` |
+
+#### Schedule Status Values
+
+| Value          | Meaning                                                   | Considered final? |
+| -------------- | --------------------------------------------------------- | ----------------- |
+| `confirmed`    | Manually confirmed as final (for example via JSON import) | Yes               |
+| `auto_discord` | Auto-collected from the official Discord schedule channel | No                |
+| `auto_twitch`  | Auto-collected or fetched from Twitch (may be incomplete) | No                |
 
 > [!NOTE]
-> `"isFinal": false` = auto-collected (may be incomplete). `"isFinal": true` = manually confirmed as final.
+> `confirmed` is the only final status. `auto_discord` can replace an `auto_twitch` schedule, but not a `confirmed` one. `auto_twitch` only overwrites an existing `auto_twitch` schedule (or fills an empty week).
 
 ## Error Responses
 
-### Invalid Parameters (400)
+### Invalid Query Parameters (400)
 
 ```json
 {
   "error": {
-    "code": "SC2",
-    "message": "Invalid year or week parameter"
-  }
-}
-```
-
-### Missing Search Query (400)
-
-```json
-{
-  "error": {
-    "code": "SC3",
-    "message": "Missing search query parameter"
-  }
-}
-```
-
-### Search Query Too Short (400)
-
-```json
-{
-  "error": {
-    "code": "SC4",
-    "message": "Search query must be at least 3 characters long"
+    "code": "AP4",
+    "message": "Invalid query parameters",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/schedule"
   }
 }
 ```
@@ -381,7 +357,9 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 {
   "error": {
     "code": "SC1",
-    "message": "No schedule found in the database for the given week & year."
+    "message": "No schedule found in the database for the given week & year.",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/schedule"
   }
 }
 ```
@@ -391,19 +369,23 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 ```json
 {
   "error": {
-    "code": "AU1",
-    "message": "Missing or invalid authorization header"
+    "code": "AU9",
+    "message": "Missing or invalid authorization header. Use: Authorization: Bearer YOUR_TOKEN",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/schedule"
   }
 }
 ```
 
-### Invalid Token (403)
+### Invalid Token (401)
 
 ```json
 {
   "error": {
-    "code": "AU2",
-    "message": "Invalid or expired API token"
+    "code": "AU11",
+    "message": "Invalid or expired API token",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/schedule"
   }
 }
 ```
@@ -414,7 +396,9 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 {
   "error": {
     "code": "RL4",
-    "message": "Rate limit exceeded: Maximum 100 requests per minute"
+    "message": "Rate limit exceeded: Maximum 100 requests per minute",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/schedule"
   }
 }
 ```
@@ -425,7 +409,9 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 {
   "error": {
     "code": "RL7",
-    "message": "Rate limit exceeded: Maximum 2 requests per 10 seconds"
+    "message": "Rate limit exceeded: Maximum 2 requests per 10 seconds",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/schedule/search"
   }
 }
 ```
@@ -436,7 +422,9 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 {
   "error": {
     "code": "RL8",
-    "message": "Rate limit exceeded: Maximum 6 requests per minute"
+    "message": "Rate limit exceeded: Maximum 6 requests per minute",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/schedule/search"
   }
 }
 ```
@@ -445,7 +433,7 @@ GET https://neuro.appstun.net/api/v1/schedule/weeks
 
 - The API uses calendar week numbers (ISO 8601)
 - Specific week requests require authentication and use standard rate limiting
-- Latest schedule endpoint is public with generous rate limiting
+- Latest schedule endpoint is public with the default anonymous v2 rate limit
 - Search endpoint requires authentication and uses `6/min` + `2/10s` rate limits
 - If only `week` is provided without `year`, the current year is used
 - Valid years range from 2023 to the current year

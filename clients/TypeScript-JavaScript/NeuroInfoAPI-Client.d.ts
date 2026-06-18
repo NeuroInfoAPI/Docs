@@ -1,4 +1,3 @@
-import { ofetch } from "ofetch";
 type Success<T> = {
     data: T;
     error: null;
@@ -8,20 +7,58 @@ type Failure = {
     error: NeuroApiError;
 };
 export type ApiResult<T> = Success<T> | Failure;
+export interface HttpClientOptions {
+    baseURL?: string;
+    timeout?: number;
+    headers?: Record<string, string>;
+}
+export interface HttpRequestOptions {
+    query?: Record<string, unknown>;
+    headers?: Record<string, string>;
+    method?: string;
+}
+export declare class HttpRequestError extends Error {
+    status?: number | undefined;
+    data?: unknown | undefined;
+    constructor(message: string, status?: number | undefined, data?: unknown | undefined);
+}
+/**
+ * Lightweight fetch wrapper with configurable defaults.
+ */
+export declare class HttpClient {
+    private baseURL;
+    private timeout;
+    private defaultHeaders;
+    constructor(options?: HttpClientOptions);
+    static create(options: HttpClientOptions): HttpClient;
+    request<T>(url: string, options?: HttpRequestOptions): Promise<T>;
+    private buildUrl;
+}
+/**
+ * Structured error body returned by the API.
+ */
+export interface ApiErrorBody {
+    code: string;
+    message: string;
+    timestamp: number;
+    path: string;
+}
 /**
  * Custom error class for API errors with code and status information.
  */
 export declare class NeuroApiError extends Error {
     code: string;
     status?: number | undefined;
-    constructor(code: string, message: string, status?: number | undefined);
+    timestamp?: number | undefined;
+    path?: string | undefined;
+    constructor(code: string, message: string, status?: number | undefined, timestamp?: number | undefined, path?: string | undefined);
 }
 /**
  * Client for interacting with the NeuroInfo API.
  * Provides methods to fetch stream data, VODs, schedules, and subathon information.
  */
 export declare class NeuroInfoApiClient {
-    apiInstance: ReturnType<typeof ofetch.create>;
+    apiInstance: HttpClient;
     private apiToken;
     private baseUrl;
     /**
@@ -52,12 +89,12 @@ export declare class NeuroInfoApiClient {
      * Fetches a specific VOD by stream ID.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#specific-vod-1
      */
-    getVod: (streamId: string) => Promise<ApiResult<TwitchVod>>;
+    getVod: (id: string) => Promise<ApiResult<TwitchVod>>;
     /**
-     * Fetches the schedule for a specific year and week. If no parameters are provided, fetches the current week's schedule.
+     * Fetches the schedule for a specific week and year.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#specific-weekly-schedule-1
      */
-    getSchedule: (year?: number, week?: number) => Promise<ApiResult<ScheduleResponse>>;
+    getSchedule: (week: number, year?: number) => Promise<ApiResult<ScheduleResponse>>;
     /**
      * Fetches the latest weekly schedule.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#latest-weekly-schedule-1
@@ -68,6 +105,10 @@ export declare class NeuroInfoApiClient {
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#schedule-weeks-index-1
      */
     getScheduleWeeks: () => Promise<ApiResult<ScheduleWeeksResponse>>;
+    /**
+     * Fetches the devstream schedule times.
+     */
+    getDevstreamTimes: () => Promise<ApiResult<number[]>>;
     /**
      * Searches schedule entries by message text with optional filters and cursor pagination.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#search-weekly-schedules
@@ -87,13 +128,12 @@ export declare class NeuroInfoApiClient {
      * Fetches the years for which subathon data is available.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/subathon.md#subathon-years-1
      */
-    getSubathonYears(detailed: true): Promise<ApiResult<SubathonYearsDetailedResponse>>;
-    getSubathonYears(detailed?: false): Promise<ApiResult<SubathonYearsResponse>>;
+    getSubathonYears: () => Promise<ApiResult<SubathonYearsResponse>>;
     /**
      * Fetches the Neuro-sama blog feed. Requires an API token.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/blog.md#endpoint
      */
-    getBlogFeed: (raw?: boolean) => Promise<ApiResult<BlogFeedResponse>>;
+    getBlogFeed: (raw?: boolean) => Promise<ApiResult<BlogFeedData>>;
 }
 /**
  * Event-based wrapper for the NeuroInfo API.
@@ -277,12 +317,12 @@ export declare class NeuroInfoApiWebsocketClient {
  */
 export interface NeuroInfoApiWebsocketClientOptions {
     /**
-     * WebSocket server URL. Defaults to `wss://neuro.appstun.net/api/ws`.
+     * WebSocket server URL. Defaults to `wss://neuro.appstun.net/api/<apiVer>/ws`.
      */
     baseUrl?: string;
     /**
      * REST API base URL for ticket fetching. If not provided, automatically derived from baseUrl.
-     * Example: `https://neuro.appstun.net/api`
+     * Example: `https://neuro.appstun.net/api/v2`
      */
     apiBaseUrl?: string;
     /**
@@ -370,12 +410,12 @@ export interface WsStreamRaidData {
     };
     viewerCount: number;
 }
-/** Event data for scheduleUpdate event. */
+/** Event data for scheduleUpdate on v2 WebSocket connections. */
 export interface WsScheduleUpdateData {
     year: number;
     week: number;
     schedule: ScheduleEntry[];
-    isFinal: boolean;
+    status: ScheduleStatus;
 }
 export interface BlogEntryBodySection {
     header: string;
@@ -397,9 +437,6 @@ export interface BlogFeedData {
     title: string;
     subtitle: string;
     entries: BlogFeedEntry[];
-}
-export interface BlogFeedResponse {
-    data: BlogFeedData;
 }
 export interface WsBlogFeedUpdateData extends BlogFeedData {
 }
@@ -441,6 +478,10 @@ interface WsWelcomeMessage {
         sessionId: string;
     };
 }
+interface WsAuthSuccessMessage {
+    type: "authSuccess";
+    data: Record<string, never>;
+}
 interface WsInvalidMessage {
     type: "invalid";
     data: {
@@ -481,12 +522,12 @@ interface WsEventMessage<T extends WsEventType = WsEventType> {
         timestamp: number;
     };
 }
-export type WsServerMessage = WsWelcomeMessage | WsInvalidMessage | WsAddSuccessMessage | WsRemoveSuccessMessage | WsListEventsMessage | WsPongMessage | WsEventMessage;
+export type WsServerMessage = WsWelcomeMessage | WsAuthSuccessMessage | WsInvalidMessage | WsAddSuccessMessage | WsRemoveSuccessMessage | WsListEventsMessage | WsPongMessage | WsEventMessage;
 export interface ApiClientEvents {
     streamOnline: TwitchStreamData;
     streamOffline: TwitchStreamData;
     streamUpdate: TwitchStreamData;
-    scheduleUpdate: ScheduleLatestResponse;
+    scheduleUpdate: WsScheduleUpdateData;
     subathonUpdate: SubathonData;
     subathonGoalUpdate: {
         subathon: SubathonData;
@@ -525,11 +566,13 @@ export interface TwitchVod {
     publishedAt: number;
     thumbnailUrl: string;
 }
+export type ScheduleStatus = "auto_twitch" | "auto_discord" | "confirmed";
+export declare function isScheduleFinal(status: ScheduleStatus): boolean;
 export interface ScheduleResponse {
     year: number;
     week: number;
     schedule: ScheduleEntry[];
-    isFinal: boolean;
+    status: ScheduleStatus;
 }
 export interface ScheduleLatestResponse extends ScheduleResponse {
     hasActiveSubathon: boolean;
@@ -553,7 +596,7 @@ export interface ScheduleSearchResultItem {
         year: number;
         week: number;
         schedule: ScheduleEntry[];
-        isFinal: boolean;
+        status: ScheduleStatus;
     };
 }
 export interface ScheduleSearchResponse {
@@ -577,8 +620,7 @@ export interface SubathonData {
     startTimestamp?: number;
     endTimestamp?: number;
 }
-export type SubathonYearsResponse = number[];
-export type SubathonYearsDetailedResponse = Record<number, string>;
+export type SubathonYearsResponse = Record<number, string>;
 export interface SubathonGoal {
     name: string;
     completed: boolean;

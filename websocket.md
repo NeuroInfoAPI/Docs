@@ -6,16 +6,16 @@
 
 > [!IMPORTANT]
 > Recommended authentication flow for browser clients:
-> 1) Get one-time ticket via REST (`GET /api/ws/ticket`) with Bearer token
-> 2) Connect via WebSocket using `?ticket=...`
+> 1) Get one-time ticket via REST (`GET /api/v2/ws/ticket`) with Bearer token
+> 2) Connect via WebSocket using `?ticket=...` on **`/api/v2/ws`**
 
 ### Ticket Endpoint
 
-`GET https://neuro.appstun.net/api/ws/ticket`
+`GET https://neuro.appstun.net/api/v2/ws/ticket`
 
 ### WebSocket Connection
 
-`WSS wss://neuro.appstun.net/api/ws`
+`WSS wss://neuro.appstun.net/api/v2/ws`
 
 ## Description
 
@@ -27,7 +27,7 @@ The WebSocket API provides real-time events for stream, schedule, and subathon u
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/ws/ticket`
+`GET https://neuro.appstun.net/api/v2/ws/ticket`
 
 #### Description
 
@@ -44,7 +44,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/ws/ticket
+GET https://neuro.appstun.net/api/v2/ws/ticket
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -57,7 +57,7 @@ Authorization: Bearer YOUR_API_TOKEN
   "data": {
     "ticket": "f8c8e16a...",
     "expiresIn": 30,
-    "usage": "Connect with wss://neuro.appstun.net/api/ws?ticket=<ticket>"
+    "usage": "Connect with wss://neuro.appstun.net/api/v2/ws?ticket=<ticket>"
   }
 }
 ```
@@ -66,7 +66,7 @@ Authorization: Bearer YOUR_API_TOKEN
 
 #### Endpoint
 
-`WSS wss://neuro.appstun.net/api/ws`
+`WSS wss://neuro.appstun.net/api/v2/ws`
 
 #### Description
 
@@ -76,7 +76,7 @@ Establishes an authenticated WebSocket session. After connecting, clients can su
 
 **Required** - Choose one method:
 
-- **Ticket (recommended)**: `wss://neuro.appstun.net/api/ws?ticket=YOUR_ONE_TIME_TICKET`
+- **Ticket (recommended)**: `wss://neuro.appstun.net/api/v2/ws?ticket=YOUR_ONE_TIME_TICKET`
 - **Authorization header** (server-to-server): `Authorization: Bearer YOUR_API_TOKEN`
 
 #### Parameters
@@ -88,13 +88,17 @@ Establishes an authenticated WebSocket session. After connecting, clients can su
 #### Request Examples
 
 ```http
-GET wss://neuro.appstun.net/api/ws?ticket=YOUR_ONE_TIME_TICKET
+GET wss://neuro.appstun.net/api/v2/ws?ticket=YOUR_ONE_TIME_TICKET
 ```
 
 ```http
-GET wss://neuro.appstun.net/api/ws
+GET wss://neuro.appstun.net/api/v2/ws
 Authorization: Bearer YOUR_API_TOKEN
 ```
+
+## WebSocket Message Protocol
+
+This message protocol is used by `WSS /api/v2/ws`.
 
 #### Client Message Format
 
@@ -150,7 +154,7 @@ Authorization: Bearer YOUR_API_TOKEN
 }
 ```
 
-##### Event Message
+##### Event Message (v2 `scheduleUpdate`)
 
 ```json
 {
@@ -161,12 +165,15 @@ Authorization: Bearer YOUR_API_TOKEN
       "year": 2026,
       "week": 8,
       "schedule": [],
-      "isFinal": true
+      "status": "confirmed"
     },
     "timestamp": 1766924114000
   }
 }
 ```
+
+> [!NOTE]
+> `scheduleUpdate` uses `status` (`auto_twitch`, `auto_discord`, `confirmed`). See [Schedule API](schedule.md#schedule-status-values).
 
 ##### Blog Feed Update Event
 
@@ -274,8 +281,10 @@ Authorization: Bearer YOUR_API_TOKEN
 ```json
 {
   "error": {
-    "code": "AU1",
-    "message": "Missing or invalid authorization header"
+    "code": "AU9",
+    "message": "Missing or invalid authorization header. Use: Authorization: Bearer YOUR_TOKEN",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/ws/ticket"
   }
 }
 ```
@@ -285,8 +294,10 @@ Authorization: Bearer YOUR_API_TOKEN
 ```json
 {
   "error": {
-    "code": "AU2",
-    "message": "Invalid or expired API token"
+    "code": "AU11",
+    "message": "Invalid or expired API token",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/ws/ticket"
   }
 }
 ```
@@ -296,8 +307,10 @@ Authorization: Bearer YOUR_API_TOKEN
 ```json
 {
   "error": {
-    "code": "RL4",
-    "message": "Rate limit exceeded: Maximum 100 requests per minute"
+    "code": "RL6",
+    "message": "Rate limit exceeded: Maximum 10 requests per 10 seconds",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/ws/ticket"
   }
 }
 ```

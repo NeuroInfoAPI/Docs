@@ -4,37 +4,47 @@
 
 ## Response Format
 
-Error responses follow a consistent JSON format. Success responses can differ by endpoint and are shown in each endpoint's documentation.
+v2 error responses follow a consistent JSON format. Success responses use a consistent `{ "data": ... }` envelope; the payload inside `data` differs by endpoint and is shown in each endpoint's documentation.
 
 **Success Response (example):**
 
 ```json
 {
-  "year": 2026,
-  "week": 11,
-  "schedule": []
+  "data": {
+    "year": 2026,
+    "week": 11,
+    "schedule": []
+  }
 }
 ```
 
 **Error Response:**
 
+All REST errors use the same envelope. `timestamp` is a Unix epoch in milliseconds; `path` is the request path without query parameters.
+
 ```json
 {
   "error": {
-    "code": "ERROR_CODE",
-    "message": "Error description"
+    "code": "SC1",
+    "message": "No schedule found in the database for the given week & year.",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/schedule"
   }
 }
 ```
+
+This applies to route handlers, query validation (`AP4`), authentication (`AU*`), and rate limits (`RL*`).
 
 ## Error Codes Reference
 
 ### General API Errors (AP)
 
-| Code  | Error               | Description           |
-| ----- | ------------------- | --------------------- |
-| `AP1` | `Api_InternalError` | Internal server error |
-| `AP3` | `Api_NotFound`      | 404 Not Found         |
+| Code  | Error                  | Description                                  |
+| ----- | ---------------------- | -------------------------------------------- |
+| `AP1` | `Api_InternalError`    | Internal server error                        |
+| `AP2` | `Api_MethodNotAllowed` | Method not allowed (API tokens are GET-only) |
+| `AP3` | `Api_NotFound`         | 404 Not Found                                |
+| `AP4` | `Api_InvalidQuery`     | Invalid query parameters                     |
 
 ### Schedule Errors (SC)
 
@@ -69,6 +79,7 @@ Error responses follow a consistent JSON format. Success responses can differ by
 | `AU12` | `Auth_InternalError`         | Internal server error during authentication                                    |
 | `AU13` | `Auth_ConfigurationError`    | Configuration error. Please check Twitch settings                              |
 | `AU14` | `Auth_MissingAuthCode`       | Authorization code missing                                                     |
+| `AU15` | `Auth_OriginNotAllowed`      | Browser origin is not allowed for this authentication request                  |
 
 ### Rate Limit Errors (RL)
 
@@ -81,15 +92,16 @@ Error responses follow a consistent JSON format. Success responses can differ by
 | `RL6` | `RateLimit_Burst`           | Rate limit exceeded: Maximum 10 requests per 10 seconds |
 | `RL7` | `RateLimit_Sensitive`       | Rate limit exceeded: Maximum 2 requests per 10 seconds  |
 | `RL8` | `RateLimit_SearchMinute`    | Rate limit exceeded: Maximum 6 requests per minute      |
+| `RL9` | `RateLimit_BlogFeedMinute`  | Rate limit exceeded: Maximum 16 requests per minute     |
 
 ### Subathon Errors (SB)
 
-| Code  | Error                       | Description                                            |
-| ----- | --------------------------- | ------------------------------------------------------ |
-| `SB1` | `Subathon_NoActiveSubathon` | No active subathon found                               |
-| `SB2` | `Subathon_NoParams`         | Year parameter is required                             |
-| `SB3` | `Subathon_InvalidParams`    | Invalid year parameter or year cannot be in the future |
-| `SB4` | `Subathon_NoSubathon`       | No subathon found for the specified year               |
+| Code  | Error                  | Description                                            |
+| ----- | ---------------------- | ------------------------------------------------------ |
+| `SB1` | `Sub_NoActiveSubathon` | No active subathon found                               |
+| `SB2` | `Sub_NoParams`         | Year parameter is required                             |
+| `SB3` | `Sub_InvalidParams`    | Invalid year parameter or year cannot be in the future |
+| `SB4` | `Sub_NoSubathon`       | No subathon found for the specified year               |
 
 ### Blog Errors (BL)
 
@@ -133,7 +145,9 @@ When a valid error code is provided:
 {
   "error": {
     "code": "AP1",
-    "message": "Internal server error"
+    "message": "Internal server error",
+    "timestamp": 1717516800000,
+    "path": "/api/test/geterror"
   }
 }
 ```
@@ -177,16 +191,14 @@ The API implements multiple rate limiting tiers:
 
 ### Parameter Validation
 
-- **Schedule**: Requires valid year and week parameters (`SC2`)
-- **Subathon**: Requires year parameter, cannot be future date (`SB3`)
-- **VOD**: Requires valid stream ID (`VD1`)
+- **Schedule / Subathon / VOD**: invalid or missing query parameters return `AP4`; missing resources return domain codes (`SC1`, `SB4`, `VD1`, …)
 
 ### WebSocket Errors
 
 The WebSocket API uses two different error formats:
 
-- **Ticket endpoint** (`GET /api/ws/ticket`): Standard JSON errors with API codes (`AU*`, `RL*`)
-- **WebSocket handshake** (`WSS /api/ws`): Plain text HTTP errors (non-JSON)
+- **Ticket endpoint** (`GET /api/v2/ws/ticket`): Standard JSON errors with API codes (`AU*`, `RL*`)
+- **WebSocket handshake** (`WSS /api/v2/ws`): Plain text HTTP errors (non-JSON)
 - **WebSocket message validation**: Structured WebSocket messages with `type: "invalid"`
 
 #### WebSocket Handshake Errors (plain text)

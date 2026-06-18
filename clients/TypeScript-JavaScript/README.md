@@ -4,6 +4,10 @@
 
 A comprehensive TypeScript client that provides full access to all NeuroInfoAPI endpoints with proper type definitions.
 
+> [!NOTE]
+> The client defaults to `https://neuro.appstun.net/api/v2` and unwraps API responses automatically.  
+> Upgrading from v1? See the **[client migration guide](migrate.md)**.
+
 **The client is also available as an NPM package: [`neuroinfoapi-client`](https://www.npmjs.com/package/neuroinfoapi-client)** 
 
 **File:** [`NeuroInfoAPI-Client.ts`](NeuroInfoAPI-Client.ts)
@@ -19,21 +23,22 @@ A comprehensive TypeScript client that provides full access to all NeuroInfoAPI 
 - 📝 **Full TypeScript Support** - Complete type definitions for all API responses
 - ⏱️ **Timeout Protection** - 10-second request timeout by default
 - ✅ **Type-Safe Error Handling** - Result pattern with `{ data, error }` return type
+- 📦 **Response Unwrapping** - Automatically unwraps `{ data: ... }` API responses
 - 📰 **Blog Feed Support** - Fetch parsed or raw blog feed data
 - ~~📡 **Event System** - `NeuroInfoApiEventer` for "real-time" updates~~ (deprecated)
 - ⚡ **WebSocket Client** - `NeuroInfoApiWebsocketClient` for true real-time updates with auto reconnect
 
 ### Requirements
 
-This file uses the lightweight HTTP client [ofetch](https://www.npmjs.com/package/ofetch) for making requests.<br>
-Install the package with `npm install ofetch`.
+The client uses a bundled lightweight `HttpClient` built on the standard `fetch`, `AbortController`, `URL`, and `WebSocket` Web APIs. No external HTTP package is required.
 
-Works in browser projects too (Vite/Webpack/Rollup/etc.), as long as `ofetch` is installed.  
+Works in browser projects too (Vite/Webpack/Rollup/etc.). For direct browser ESM imports, import the prebuilt JavaScript file with its extension:
 
-If you prefer `fetch()` (native in browsers & Node.js), you can ask your favorite local AI to make this change with the following prompt:
+```typescript
+import { NeuroInfoApiClient } from "./NeuroInfoAPI-Client.js";
 ```
-Replace the ofetch-based request layer in NeuroInfoAPI-Client.{js,ts} with the native fetch() API. Ensure performance remains comparable.
-```  
+
+Node.js usage requires a runtime with global `fetch` and `WebSocket` support for the WebSocket client. If your Node.js version does not provide global `WebSocket`, use a browser/bundler runtime or provide a compatible global before connecting.
 
 ### Quick Start
 
@@ -75,8 +80,9 @@ All client methods return a result object with either `data` or `error`:
 const { data, error } = await client.getCurrentStream();
 
 if (error) {
-  // error is NeuroApiError with code, message, and status
+  // NeuroApiError: code, message, status, timestamp, path
   console.log(`Error ${error.code}: ${error.message}`);
+  if (error.path) console.log(`At ${error.path} (${error.timestamp})`);
   return;
 }
 
@@ -95,11 +101,30 @@ const parsedFeed = await client.getBlogFeed();
 const rawFeed = await client.getBlogFeed(true);
 
 if (parsedFeed.data) {
-  console.log(parsedFeed.data.data.entries[0]?.content);
+  console.log(parsedFeed.data.entries[0]?.content);
 }
 
 if (rawFeed.data) {
-  console.log(rawFeed.data.data.entries[0]?.rawContent);
+  console.log(rawFeed.data.entries[0]?.rawContent);
+}
+```
+
+### Schedule Status
+
+Schedule responses include a `status` field:
+
+- `confirmed` — final, manually confirmed
+- `auto_discord` — auto-collected from the Discord schedule channel
+- `auto_twitch` — auto-collected or fetched from Twitch
+
+Use the exported helper `isScheduleFinal(status)` when you need a boolean check.
+
+```typescript
+import { isScheduleFinal } from "./NeuroInfoAPI-Client";
+
+const { data } = await client.getLatestSchedule();
+if (data && !isScheduleFinal(data.status)) {
+  console.log("Schedule may still change");
 }
 ```
 
@@ -217,7 +242,7 @@ await wsClient.connect();
 `secretneuroaccountOnline` sends the same payload shape as `streamOnline`, but it is emitted specifically when the Twitch account `secretneuroaccount` goes live. This is the only event for this account.
 
 > [!NOTE]
-> By default, the WebSocket client uses ticket-based authentication (`GET /api/ws/ticket`) before connecting. This avoids putting API tokens into URL query parameters.
+> By default, the WebSocket client uses ticket-based authentication (`GET /api/v2/ws/ticket`) before connecting. This avoids putting API tokens into URL query parameters.
 
 ---
 

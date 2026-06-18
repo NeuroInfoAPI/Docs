@@ -1,5 +1,12 @@
 # NeuroInfoApi Documentation
 
+> [!IMPORTANT]
+> **v2 is now available.** v1 will be turned off on **2026-11-01**. <br>
+> If you're still using `/api/v1/`, please update/migrate to `/api/v2/`. 
+> Check `GET /api/info` for the latest version status.  
+> See the **[v1 → v2 migration guide](migrate.md)** for endpoint, response, and WebSocket changes.
+> If you still need the v2 docs ... i guess they are [here](https://github.com/NeuroInfoAPI/Docs/tree/v1).
+
 Welcome to the **NeuroInfoApi** documentation repository! This API provides comprehensive access to Neuro-sama stream data, including schedules, VODs, Twitch information, and subathon details.
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Appstun/NeuroInfoAPI-Docs)
@@ -17,6 +24,7 @@ This repository contains documentation for all public API areas:
 - **[Blog API](blog.md)** - Neuro-sama blog feed and entry content
 - **[WebSocket API](websocket.md)** - Real-time events and WebSocket authentication
 - **[Prebuild Clients](clients/README.md)** - ready-to-use clients for your project
+- **[v1 → v2 Migration Guide](migrate.md)** - upgrade paths for REST, WebSocket, and responses
 
 ## 📊 API Features
 
@@ -65,19 +73,21 @@ This repository contains documentation for all public API areas:
 
 ## 🔧 API Technical Details
 
-- **Base URL**: `https://neuro.appstun.net/api/v1/`
-- **WebSocket URL**: `wss://neuro.appstun.net/api/ws`
+- **Base URL**: `https://neuro.appstun.net/api/v2/`
+- **WebSocket URL**: `wss://neuro.appstun.net/api/v2/ws`
+- **WebSocket Ticket URL**: `https://neuro.appstun.net/api/v2/ws/ticket`
 - **HTTP Methods**: GET only
-- **Response Format**: JSON
+- **Response Format**: JSON — v2 REST success always `{"data": ...}`, v2 REST errors `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}`
 - **Content-Type**: `application/json`
 - **Authentication**: Bearer token in Authorization header
 
 ## ⚡ Rate Limiting
 
-- **Public endpoints**: 300 requests per minute (generous)
-- **Protected endpoints**: 100 requests per minute (standard)
-- **Burst protection**: 10 requests per 10 seconds
-- Rate limits are applied per API token
+- **Default public/anonymous v2 endpoints**: 30 requests per minute
+- **Authenticated v2 endpoints**: 100 requests per minute per API token
+- **Generous endpoints**: 300 requests per minute where explicitly documented (for example `GET /api/info`)
+- **Endpoint-specific limits**: Some routes have stricter limits, such as schedule search (`6/min` plus `2/10s`) and blog feed (`16/min`)
+- Rate limits are applied per API token when authenticated, otherwise per client IP
 
 ## 📝 Notes
 
@@ -85,7 +95,7 @@ This repository contains documentation for all public API areas:
 - Data is cached for optimal performance
 - Manual updates may cause slight delays in data availability
 - The API uses calendar week numbers (ISO 8601 standard)
-- Error responses follow `{error: {...}}`; success responses are endpoint-specific (object, array, or `{data: {...}}`)
+- All v2 REST success responses follow `{"data": ...}`; all v2 REST error responses follow `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}`
 
 <br>
 

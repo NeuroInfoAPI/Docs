@@ -5,7 +5,7 @@
       "author": "Maintainer"
     },
     {
-      "content": "For every REST endpoint, always include: public/private access, required params, rate-limit tier, and cache behavior when documented. Distinguish response shapes clearly because success payloads vary by endpoint while errors are standardized under { error: { code, message } }.",
+      "content": "For every REST endpoint, always include: public/private access, required params, rate-limit tier, and cache behavior when documented. Distinguish response shapes clearly: v2 success responses use { data: ... } and v2 errors use { error: { code, message, timestamp, path } }.",
       "author": "Maintainer"
     },
     {
@@ -29,7 +29,7 @@
       "parent": "NeuroInfoAPI Overview",
       "page_notes": [
         {
-          "content": "Prioritize actionable auth troubleshooting: missing header, invalid token, and how browser clients should use GET /api/ws/ticket before WSS connect. Include the exact Authorization header format and mention ticket TTL.",
+          "content": "Prioritize actionable auth troubleshooting: missing header, invalid token, and how browser clients should use GET /api/v2/ws/ticket before WSS connect. Include the exact Authorization header format and mention ticket TTL.",
           "author": "Maintainer"
         }
       ]
@@ -49,27 +49,27 @@
       "purpose": "Overview of the REST API layer from root docs: endpoint grouping, caching strategy, rate-limiting tiers, and standardized error response format, with links to domain pages.",
       "page_notes": [
         {
-          "content": "Emphasize that all REST endpoints are GET and that success shapes differ by endpoint. Include one canonical error response example from errors.md and explain where each domain doc provides full schemas."
+          "content": "Emphasize that all REST endpoints are GET and that success responses use the canonical { data: ... } envelope. Include one canonical error response example from errors.md and explain where each domain doc provides full schemas."
         }
       ]
     },
     {
       "title": "Schedule API",
-      "purpose": "Detailed documentation for all four /schedule endpoints using schedule.md: GET /schedule, GET /schedule/latest, GET /schedule/search, and GET /schedule/devstreamtimes, including parameters, response fields, and pagination behavior.",
+      "purpose": "Detailed documentation for schedule/devstream endpoints using schedule.md: GET /schedule, GET /schedule/latest, GET /schedule/search, GET /schedule/weeks, and GET /devstream/times, including parameters, response fields, and pagination behavior.",
       "parent": "REST API Reference",
       "page_notes": [
         {
-          "content": "Highlight search-specific constraints (query length, cursor pair usage, dual rate limits RL7 + RL8). Clearly explain schedule day type values and the meaning of isFinal and hasActiveSubathon."
+          "content": "Highlight search-specific constraints (query length, cursor pair usage, dual rate limits RL7 + RL8). Clearly explain schedule day type values, schedule status values (auto_twitch/auto_discord/confirmed), overwrite priority, and hasActiveSubathon."
         }
       ]
     },
     {
       "title": "Twitch API",
-      "purpose": "Detailed documentation for /twitch endpoints from twitch.md: stream status, all VODs, and single VOD by streamId, including auth differences and payload fields.",
+      "purpose": "Detailed documentation for /twitch endpoints from twitch.md: stream status, all VODs, and single VOD by Twitch stream id, including auth differences and payload fields.",
       "parent": "REST API Reference",
       "page_notes": [
         {
-          "content": "Explicitly warn that GET /twitch/vod expects streamId (not VOD id). Include cache cadence notes (stream updates, VOD refresh windows) and list common VD/AU/RL errors with practical handling guidance."
+          "content": "Explicitly warn that GET /twitch/vod expects query parameter id with a Twitch stream ID (not VOD ID). Include cache cadence notes (stream updates, VOD refresh windows) and list common VD/AU/RL errors with practical handling guidance."
         }
       ]
     },
@@ -127,7 +127,7 @@
       "purpose": "Overview of the TypeScript/JavaScript client documentation in clients/ and clients/TypeScript-JavaScript/: npm package usage (neuroinfoapi-client), environment support, and main classes.",
       "page_notes": [
         {
-          "content": "Base this page on clients/README.md and clients/TypeScript-JavaScript/README.md. Mention available files (.ts, .js, .d.ts), axios dependency, browser compatibility, and where each class fits. Explicitly state that the npm package neuroinfoapi-client provides the same API behavior as the local JS/TS client files."
+          "content": "Base this page on clients/README.md and clients/TypeScript-JavaScript/README.md. Mention available files (.ts, .js, .d.ts), the built-in fetch-based HttpClient, browser compatibility, and where each class fits. Explicitly state that the npm package neuroinfoapi-client provides the same API behavior as the local JS/TS client files."
         }
       ]
     },
@@ -137,7 +137,7 @@
       "parent": "Client SDK (TypeScript/JavaScript)",
       "page_notes": [
         {
-          "content": "Include practical examples for setApiToken, getScheduleSearch pagination, and ApiResult-style error handling. Note timeout defaults and mention the exposed axios instance for advanced customization when available. Add a short note that using neuroinfoapi-client from npm is functionally equivalent to using the bundled JS/TS client file directly."
+          "content": "Include practical examples for setApiToken, getScheduleSearch pagination, and ApiResult-style error handling. Note timeout defaults and the exposed built-in HttpClient for advanced customization when available. Add a short note that using neuroinfoapi-client from npm is functionally equivalent to using the bundled JS/TS client file directly."
         }
       ]
     },
@@ -153,17 +153,17 @@
     },
     {
       "title": "NeuroInfoApiEventer (Deprecated)",
-      "purpose": "Documentation for the deprecated polling-based NeuroInfoApiEventer from clients/TypeScript-JavaScript/README.md and client source, including behavior, limits, and migration guidance.",
+      "purpose": "Documentation for the deprecated polling-based NeuroInfoApiEventer from clients/TypeScript-JavaScript/README.md and client source, including behavior, limits, and upgrade guidance.",
       "parent": "Client SDK (TypeScript/JavaScript)",
       "page_notes": [
         {
-          "content": "Clearly mark as deprecated and provide migration mapping to NeuroInfoApiWebsocketClient equivalents. Keep polling details concise: fetchInterval defaults/minimum and state-diff emission behavior."
+          "content": "Clearly mark as deprecated and provide upgrade mapping to NeuroInfoApiWebsocketClient equivalents. Keep polling details concise: fetchInterval defaults/minimum and state-diff emission behavior."
         }
       ]
     },
     {
       "title": "Changelog & Version History",
-      "purpose": "Summary of API and client version history based on CHANGELOG.md and repository structure changes, highlighting behavior-impacting changes and migration notes.",
+      "purpose": "Summary of API and client version history based on CHANGELOG.md and repository structure changes, highlighting behavior-impacting changes and upgrade notes.",
       "page_notes": [
         {
           "content": "Focus on developer-impacting milestones: endpoint behavior changes, auth flow adjustments, WebSocket additions, deprecated client features, and any renamed/moved client artifacts in clients/TypeScript-JavaScript/."
@@ -175,7 +175,7 @@
       "purpose": "Definitions of codebase-specific terms and abbreviations across root docs and client docs, with pointers to the most relevant markdown pages and client files.",
       "page_notes": [
         {
-          "content": "Include terms that reduce confusion: streamId vs VOD id, ticket vs token, isFinal, hasActiveSubathon, reached vs completed, cursor pagination, and Ws invalid reasons. Keep entries concise and cross-link to source docs."
+          "content": "Include terms that reduce confusion: Twitch stream ID vs VOD ID, ticket vs token, schedule status (auto_twitch/auto_discord/confirmed), hasActiveSubathon, reached vs completed, cursor pagination, and Ws invalid reasons. Keep entries concise and cross-link to source docs."
         }
       ]
     }

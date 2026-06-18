@@ -10,19 +10,19 @@
 
 ### Current Subathon
 
-`GET https://neuro.appstun.net/api/v1/subathon/current`
+`GET https://neuro.appstun.net/api/v2/subathon`
 
 ### Subathon Years
 
-`GET https://neuro.appstun.net/api/v1/subathon/years`
+`GET https://neuro.appstun.net/api/v2/subathon/years`
 
 ### Subathon Data (Specific Year)
 
-`GET https://neuro.appstun.net/api/v1/subathon`
+`GET https://neuro.appstun.net/api/v2/subathon`
 
 ## Description
 
-Access subathon data and goal information. The current subathon endpoint is publicly available with generous rate limiting, the years endpoint can also return names in detailed mode, and specific year data requires authentication.
+Access subathon data and goal information. The current subathon endpoint is publicly available with generous rate limiting, the years endpoint returns year-to-name mappings, and specific year data requires authentication.
 
 ## Endpoints Details
 
@@ -30,7 +30,7 @@ Access subathon data and goal information. The current subathon endpoint is publ
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v1/subathon/current`
+`GET https://neuro.appstun.net/api/v2/subathon`
 
 #### Description
 
@@ -47,7 +47,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v1/subathon/current
+GET https://neuro.appstun.net/api/v2/subathon
 ```
 
 #### Response Format
@@ -55,31 +55,33 @@ GET https://neuro.appstun.net/api/v1/subathon/current
 ##### Success Response (200)
 
 ```json
-[
-  {
-    "year": 2025,
-    "name": "Neuro-sama Subathon 3",
-    "subcount": 132450,
-    "goals": {
-      "1000": { "name": "Goal A", "completed": true, "reached": true },
-      "100000": { "name": "Goal B", "completed": false, "reached": true }
-    },
-    "isActive": true,
-    "startTimestamp": 1764500000000,
-    "endTimestamp": null
-  }
-]
+{
+  "data": [
+    {
+      "year": 2025,
+      "name": "Neuro-sama Subathon 3",
+      "subcount": 132450,
+      "goals": {
+        "1000": { "name": "Goal A", "completed": true, "reached": true },
+        "100000": { "name": "Goal B", "completed": false, "reached": true }
+      },
+      "isActive": true,
+      "startTimestamp": 1764500000000,
+      "endTimestamp": null
+    }
+  ]
+}
 ```
 
 ### Subathon Years
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v1/subathon/years`
+`GET https://neuro.appstun.net/api/v2/subathon/years`
 
 #### Description
 
-Get all years where a subathon took place. Use `?detailed` to include the subathon name for each year.
+Get all years where a subathon took place, mapped to their name.
 
 #### Authentication
 
@@ -87,16 +89,12 @@ Get all years where a subathon took place. Use `?detailed` to include the subath
 
 #### Parameters
 
-| Parameter  | Type    | Required | Description                                                    |
-| ---------- | ------- | -------- | -------------------------------------------------------------- |
-| `detailed` | boolean | No       | If present, returns an object mapping `year -> subathon name`. |
+None
 
-#### Request Examples
+#### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v1/subathon/years
-
-GET https://neuro.appstun.net/api/v1/subathon/years?detailed
+GET https://neuro.appstun.net/api/v2/subathon/years
 ```
 
 #### Response Format
@@ -104,16 +102,12 @@ GET https://neuro.appstun.net/api/v1/subathon/years?detailed
 ##### Success Response (200)
 
 ```json
-[2023, 2024, 2025]
-```
-
-##### Success Response (200, Detailed)
-
-```json
 {
-  "2023": "Neuro-sama Subathon",
-  "2024": "Neuro-sama Subathon 2",
-  "2025": "Neuro-sama Subathon 3"
+  "data": {
+    "2023": "Neuro-sama Subathon",
+    "2024": "Neuro-sama Subathon 2",
+    "2025": "Neuro-sama Subathon 3"
+  }
 }
 ```
 
@@ -121,7 +115,7 @@ GET https://neuro.appstun.net/api/v1/subathon/years?detailed
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v1/subathon`
+`GET https://neuro.appstun.net/api/v2/subathon`
 
 #### Description
 
@@ -143,7 +137,7 @@ Get subathon data for a specific year.
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v1/subathon?year=2025
+GET https://neuro.appstun.net/api/v2/subathon?year=2025
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -153,16 +147,18 @@ Authorization: Bearer YOUR_API_TOKEN
 
 ```json
 {
-  "year": 2023,
-  "name": "Neuro-sama Subathon",
-  "subcount": 41224,
-  "goals": {
-    "9000": { "name": "Swap models with Neuro", "completed": true, "reached": true },
-    "20000": { "name": "Neuro original song", "completed": true, "reached": true }
-  },
-  "isActive": false,
-  "startTimestamp": 1703012400000,
-  "endTimestamp": null
+  "data": {
+    "year": 2023,
+    "name": "Neuro-sama Subathon",
+    "subcount": 41224,
+    "goals": {
+      "9000": { "name": "Swap models with Neuro", "completed": true, "reached": true },
+      "20000": { "name": "Neuro original song", "completed": true, "reached": true }
+    },
+    "isActive": false,
+    "startTimestamp": 1703012400000,
+    "endTimestamp": null
+  }
 }
 ```
 
@@ -193,29 +189,22 @@ Authorization: Bearer YOUR_API_TOKEN
 {
   "error": {
     "code": "SB1",
-    "message": "No active subathon found"
+    "message": "No active subathon found",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/subathon"
   }
 }
 ```
 
-### Missing Parameters (400)
+### Invalid Query Parameters (400)
 
 ```json
 {
   "error": {
-    "code": "SB2",
-    "message": "Year parameter is required"
-  }
-}
-```
-
-### Invalid Parameters (400)
-
-```json
-{
-  "error": {
-    "code": "SB3",
-    "message": "Invalid year parameter or year cannot be in the future"
+    "code": "AP4",
+    "message": "Invalid query parameters",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/subathon"
   }
 }
 ```
@@ -226,7 +215,9 @@ Authorization: Bearer YOUR_API_TOKEN
 {
   "error": {
     "code": "SB4",
-    "message": "No subathon found for the specified year"
+    "message": "No subathon found for the specified year",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/subathon"
   }
 }
 ```
@@ -236,8 +227,10 @@ Authorization: Bearer YOUR_API_TOKEN
 ```json
 {
   "error": {
-    "code": "AU1",
-    "message": "Missing or invalid authorization header"
+    "code": "AU9",
+    "message": "Missing or invalid authorization header. Use: Authorization: Bearer YOUR_TOKEN",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/subathon"
   }
 }
 ```
@@ -247,8 +240,10 @@ Authorization: Bearer YOUR_API_TOKEN
 ```json
 {
   "error": {
-    "code": "AU2",
-    "message": "Invalid or expired API token"
+    "code": "AU11",
+    "message": "Invalid or expired API token",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/subathon"
   }
 }
 ```
@@ -259,17 +254,20 @@ Authorization: Bearer YOUR_API_TOKEN
 {
   "error": {
     "code": "RL4",
-    "message": "Rate limit exceeded: Maximum 100 requests per minute"
+    "message": "Rate limit exceeded: Maximum 100 requests per minute",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/subathon"
   }
 }
 ```
 
 ## Other Notes
 
-- Current subathon endpoint is public with generous rate limiting
+- Current subathon endpoint is public with the default anonymous v2 rate limit
 - Specific year data requires authentication with standard rate limiting
-- `/subathon/years` supports `?detailed` to return `{ "year": "subathon name" }`
+- `/subathon/years` always returns `{ "year": "subathon name" }`
 - Goals are automatically marked as `reached: true` if the current subscriber count meets or exceeds the goal threshold
 - Subathon data is cached and refreshed periodically
-- Multiple active subathons can exist; `/current` returns an array sorted by year (descending)
+- Multiple active subathons can exist; `/subathon` without `year` returns an array sorted by year (descending)
 - Goal thresholds are defined as integer subscriber counts in the goals object keys
+

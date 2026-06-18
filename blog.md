@@ -4,7 +4,7 @@
 
 ## Endpoint
 
-`GET https://neuro.appstun.net/api/v1/blog/feed`
+`GET https://neuro.appstun.net/api/v2/blog`
 
 ## Description
 
@@ -23,16 +23,12 @@ Returns the cached Neuro-sama blog feed as JSON. By default, each entry includes
 ## Request Examples
 
 ```http
-GET https://neuro.appstun.net/api/v1/blog/feed
-```
-
-```http
-GET https://neuro.appstun.net/api/v1/blog/feed
+GET https://neuro.appstun.net/api/v2/blog
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
 ```http
-GET https://neuro.appstun.net/api/v1/blog/feed?raw
+GET https://neuro.appstun.net/api/v2/blog?raw
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -101,7 +97,9 @@ Authorization: Bearer YOUR_API_TOKEN
 {
   "error": {
     "code": "BL1",
-    "message": "No blog data found"
+    "message": "No blog data found",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/blog"
   }
 }
 ```
@@ -112,7 +110,9 @@ Authorization: Bearer YOUR_API_TOKEN
 {
   "error": {
     "code": "AU9",
-    "message": "Missing or invalid authorization header. Use: Authorization: Bearer YOUR_TOKEN"
+    "message": "Missing or invalid authorization header. Use: Authorization: Bearer YOUR_TOKEN",
+    "timestamp": 1717516800000,
+    "path": "/api/v2/blog"
   }
 }
 ```
@@ -122,4 +122,4 @@ Authorization: Bearer YOUR_API_TOKEN
 - `rawContent` is the decoded HTML from the feed entry before it is transformed into parsed sections
 - The blog feed is cached and refreshed every 15 minutes on the server
 - `content[x].body` can contain Discord markdown formatting
-- This endpoint is rate-limited per API token
+- This endpoint requires authentication and is rate-limited to `16/min` per API token

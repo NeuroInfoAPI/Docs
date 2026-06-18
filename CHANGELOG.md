@@ -3,6 +3,39 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [18.06.2026]
+
+### Added
+
+- Added schedule `status` field documentation (`auto_twitch`, `auto_discord`, `confirmed`) with overwrite rules ([schedule.md](schedule.md)).
+- Added public documentation for API endpoints and the consistent `{ "data": ... }` response envelope ([README.md](README.md), [quickInfo.md](quickInfo.md), all endpoint docs).
+- Added documentation for `GET /devstream/times` and `GET /api/info` ([schedule.md](schedule.md), [quickInfo.md](quickInfo.md)).
+- Added v1 to v2 migration guide ([migrate.md](migrate.md)) and TypeScript/JavaScript client migration guide ([clients/TypeScript-JavaScript/migrate.md](clients/TypeScript-JavaScript/migrate.md)).
+- Documented v1 sunset date (**2026-11-01**), `GET /api/info` version boot endpoint, and v1 REST deprecation headers (`Deprecation`, `Sunset`, `Link`) on `/api/v1/*`.
+- Added `AP2` method-not-allowed and `AP4` invalid query parameter error documentation ([errors.md](errors.md)).
+- Documented unified REST error envelope with `code`, `message`, `timestamp`, and `path` ([errors.md](errors.md)).
+- Added WebSocket ticket endpoint documentation for `GET /api/v2/ws/ticket`.
+
+### Changed
+
+- **API v2** is now the documented public API version. v1 has its own branch.
+- Documented schedule response `status` on REST endpoints and schedule search results ([schedule.md](schedule.md)).
+- Added WebSocket endpoint `WSS /api/v2/ws` with `scheduleUpdate.status` ([websocket.md](websocket.md)).
+- Updated public docs to use the v2 base URL `https://neuro.appstun.net/api/v2/`.
+- Updated endpoint paths: `/subathon/current` → `/subathon`, `/blog/feed` → `/blog`, `/schedule/devstreamtimes` → `/devstream/times`.
+- Updated Twitch docs: `/twitch/vod` query parameter `streamId` → `id`.
+- Updated Subathon docs: `/subathon/years` always returns year-to-name mappings (`?detailed` removed).
+- Updated all success response examples to use `{ "data": ... }`.
+- REST errors include `timestamp` and `path`.
+- TS-Client: default REST base URL `/api/v2`; `request()` unwraps `{ data: ... }` server responses.
+- TS-Client: WebSocket default URL `/api/v2/ws`; `scheduleUpdate` uses `status` ([NeuroInfoAPI-Client](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts)).
+- TS-Client: `getSchedule(week, year?)` argument order (week first); added `getDevstreamTimes()`; exported `isScheduleFinal()` helper.
+- TS-Client: `BlogFeedData` typing fix — use `result.data.entries`, not `result.data.data.entries`.
+- TS-Client: `getSubathonYears()` always returns year→name map; removed `detailed` parameter.
+- TS-Client: `NeuroApiError` exposes optional `timestamp` and `path` from v2 error responses.
+- TS-Client: replaced the external `ofetch` request dependency with the built-in fetch-based `HttpClient`.
+- Updated TS/JS client docs and generated artifacts for v2 defaults and envelope unwrapping.
+
 ## [29.05.2026]
 
 ### Changed

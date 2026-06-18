@@ -1,8 +1,8 @@
-import { FetchError, ofetch } from "ofetch";
 const baseDomain = "neuro.appstun.net";
-// Boot check: fires once when any v1 client is constructed
+const apiVer = "v2";
+// Boot check: fires once and warns when this client no longer targets the current public API version.
 let bootCheckFired = false;
-async function bootCheck(baseUrlOrApiBase) {
+async function bootCheck(baseUrlOrApiBase, clientApiVer = apiVer) {
     if (bootCheckFired)
         return;
     bootCheckFired = true;
@@ -12,24 +12,103 @@ async function bootCheck(baseUrlOrApiBase) {
         if (!resp.ok)
             return;
         const json = await resp.json();
-        const v1Status = json?.data?.versions?.v1;
-        const date = v1Status?.sunset ? new Date(v1Status.sunset) : null;
-        if (v1Status?.status === "deprecated") {
-            console.warn(`\x1b[33m--- NeuroInfoAPI v1 is deprecated and will be turned off${date ? ` on ${date.toISOString()}` : ""}. Please update to v2. ---\x1b[0m`);
+        const latestVersion = typeof json?.data?.latestVersion === "string" ? json.data.latestVersion : null;
+        const currentVersionInfo = json?.data?.versions?.[clientApiVer];
+        const latestVersionInfo = latestVersion ? json?.data?.versions?.[latestVersion] : undefined;
+        const currentStatus = currentVersionInfo?.status;
+        if (latestVersion && latestVersion !== clientApiVer) {
+            switch (currentStatus) {
+                case "deprecated":
+                    const sunsetDate = currentVersionInfo?.sunset ? new Date(currentVersionInfo.sunset) : null;
+                    console.warn(`\x1b[33m[NeuroInfoAPI] API ${clientApiVer} is deprecated and will be turned off${sunsetDate ? ` on ${sunsetDate.toISOString()}` : ""}.`);
+                    break;
+                case "removed":
+                    throw new Error(`API ${clientApiVer} is no longer available. Please update to the latest version. See ${latestVersionInfo?.docsUrl ? `See ${latestVersionInfo.docsUrl}` : ""}`);
+                default:
+                    console.warn(`\x1b[33m[NeuroInfoAPI] API ${clientApiVer} is not the latest version. The latest version is ${latestVersion}.`);
+                    break;
+            }
         }
     }
     catch {
         // Silently ignore — boot check is non-critical
     }
 }
+export class HttpRequestError extends Error {
+    constructor(message, status, data) {
+        super(message);
+        this.status = status;
+        this.data = data;
+        this.name = "HttpRequestError";
+    }
+}
+/**
+ * Lightweight fetch wrapper with configurable defaults.
+ */
+export class HttpClient {
+    constructor(options = {}) {
+        this.baseURL = options.baseURL ?? "";
+        this.timeout = options.timeout ?? 10000;
+        this.defaultHeaders = options.headers ?? {};
+    }
+    static create(options) {
+        return new HttpClient(options);
+    }
+    async request(url, options = {}) {
+        const fullUrl = this.buildUrl(url, options.query);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        try {
+            const response = await fetch(fullUrl, {
+                method: options.method ?? "GET",
+                headers: { ...this.defaultHeaders, ...options.headers },
+                signal: controller.signal,
+            });
+            let data;
+            try {
+                data = await response.json();
+            }
+            catch {
+                data = undefined;
+            }
+            if (!response.ok)
+                throw new HttpRequestError(`Request failed with status ${response.status}`, response.status, data);
+            return data;
+        }
+        catch (error) {
+            if (error instanceof HttpRequestError)
+                throw error;
+            if (error instanceof Error && error.name === "AbortError")
+                throw new HttpRequestError("Request timeout");
+            throw new HttpRequestError(error instanceof Error ? error.message : "Network error");
+        }
+        finally {
+            clearTimeout(timeoutId);
+        }
+    }
+    buildUrl(path, query) {
+        const base = this.baseURL.replace(/\/$/, "");
+        const relativePath = path.startsWith("/") ? path : `/${path}`;
+        const url = new URL(`${base}${relativePath}`);
+        if (query) {
+            for (const [key, value] of Object.entries(query)) {
+                if (value !== undefined && value !== null)
+                    url.searchParams.set(key, String(value));
+            }
+        }
+        return url.toString();
+    }
+}
 /**
  * Custom error class for API errors with code and status information.
  */
 export class NeuroApiError extends Error {
-    constructor(code, message, status) {
+    constructor(code, message, status, timestamp, path) {
         super(message);
         this.code = code;
         this.status = status;
+        this.timestamp = timestamp;
+        this.path = path;
         this.name = "NeuroApiError";
     }
 }
@@ -59,12 +138,12 @@ export class NeuroInfoApiClient {
          * Fetches a specific VOD by stream ID.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#specific-vod-1
          */
-        this.getVod = (streamId) => this.request("/twitch/vod", { streamId });
+        this.getVod = (id) => this.request("/twitch/vod", { id });
         /**
-         * Fetches the schedule for a specific year and week. If no parameters are provided, fetches the current week's schedule.
+         * Fetches the schedule for a specific week and year.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#specific-weekly-schedule-1
          */
-        this.getSchedule = (year, week) => this.request("/schedule", year || week ? { year, week } : undefined);
+        this.getSchedule = (week, year) => this.request("/schedule", { week, ...(year !== undefined ? { year } : {}) });
         /**
          * Fetches the latest weekly schedule.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#latest-weekly-schedule-1
@@ -75,6 +154,10 @@ export class NeuroInfoApiClient {
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#schedule-weeks-index-1
          */
         this.getScheduleWeeks = () => this.request("/schedule/weeks");
+        /**
+         * Fetches the devstream schedule times.
+         */
+        this.getDevstreamTimes = () => this.request("/devstream/times");
         /**
          * Searches schedule entries by message text with optional filters and cursor pagination.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#search-weekly-schedules
@@ -97,19 +180,24 @@ export class NeuroInfoApiClient {
          * Fetches the current active subathons.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/subathon.md#current-subathon-1
          */
-        this.getCurrentSubathons = () => this.request("/subathon/current");
+        this.getCurrentSubathons = () => this.request("/subathon");
         /**
          * Fetches subathon data for a specific year.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/subathon.md#subathon-data-specific-year-1
          */
         this.getSubathon = (year) => this.request("/subathon", { year });
         /**
+         * Fetches the years for which subathon data is available.
+         * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/subathon.md#subathon-years-1
+         */
+        this.getSubathonYears = () => this.request("/subathon/years");
+        /**
          * Fetches the Neuro-sama blog feed. Requires an API token.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/blog.md#endpoint
          */
-        this.getBlogFeed = (raw = false) => this.request("/blog/feed", raw ? { raw: true } : undefined);
-        this.baseUrl = options.baseUrl ?? `https://${baseDomain}/api/v1`;
-        this.apiInstance = ofetch.create({
+        this.getBlogFeed = (raw = false) => this.request("/blog", raw ? { raw: true } : undefined);
+        this.baseUrl = options.baseUrl ?? `https://${baseDomain}/api/${apiVer}`;
+        this.apiInstance = HttpClient.create({
             baseURL: this.baseUrl,
             timeout: 10000,
             headers: {
@@ -118,21 +206,20 @@ export class NeuroInfoApiClient {
         });
         if (token != null)
             this.setApiToken(token);
-        // Boot check: warn if using deprecated v1
-        if (this.baseUrl.includes("/api/v1"))
-            bootCheck(this.baseUrl);
+        bootCheck(this.baseUrl);
     }
     /**
      * Parses an error into a NeuroApiError with proper code and message.
      */
     parseError(error) {
-        if (error instanceof FetchError) {
+        if (error instanceof HttpRequestError) {
             const apiError = error.data?.error;
-            if (apiError?.code && apiError?.message)
-                return new NeuroApiError(apiError.code, apiError.message, error.response?.status);
-            if (!error.response)
+            if (apiError?.code && apiError?.message) {
+                return new NeuroApiError(apiError.code, apiError.message, error.status, typeof apiError.timestamp === "number" ? apiError.timestamp : undefined, typeof apiError.path === "string" ? apiError.path : undefined);
+            }
+            if (error.status == null)
                 return new NeuroApiError("NETWORK", error.message || "Network error");
-            return new NeuroApiError("HTTP_ERROR", `Request failed with status ${error.response.status}`, error.response.status);
+            return new NeuroApiError("HTTP_ERROR", `Request failed with status ${error.status}`, error.status);
         }
         return new NeuroApiError("UNKNOWN", String(error));
     }
@@ -143,18 +230,17 @@ export class NeuroInfoApiClient {
     /** Generic request wrapper that handles errors consistently. */
     async request(url, params) {
         try {
-            const response = await this.apiInstance(url, {
+            const response = await this.apiInstance.request(url, {
                 query: params,
                 headers: this.apiToken != null ? { Authorization: `Bearer ${this.apiToken}` } : undefined,
             });
-            return { data: response, error: null };
+            // Unwrap { data: T } response envelope
+            const data = response && typeof response === "object" && "data" in response ? response.data : response;
+            return { data: data, error: null };
         }
         catch (error) {
             return { data: null, error: this.parseError(error) };
         }
-    }
-    getSubathonYears(detailed = false) {
-        return this.request("/subathon/years", detailed ? { detailed: true } : undefined);
     }
 }
 /**
@@ -467,7 +553,7 @@ export class NeuroInfoApiWebsocketClient {
         this._heartbeatIntervalMs = 30000;
         this._heartbeatTimeoutMs = 10000;
         this.token = token;
-        this.baseUrl = options.baseUrl ?? `wss://${baseDomain}/api/ws`;
+        this.baseUrl = options.baseUrl ?? `wss://${baseDomain}/api/${apiVer}/ws`;
         this.authMethod = options.authMethod ?? "ticket";
         if (options.autoHeartbeat != null)
             this.autoHeartbeat = options.autoHeartbeat;
@@ -475,11 +561,9 @@ export class NeuroInfoApiWebsocketClient {
             this.heartbeatIntervalMs = options.heartbeatIntervalMs;
         if (options.heartbeatTimeoutMs != null)
             this.heartbeatTimeoutMs = options.heartbeatTimeoutMs;
-        // API base URL for ticket fetching (no version prefix)
-        this.apiBaseUrl = options.apiBaseUrl ?? this.baseUrl.replace(/^wss?:\/\//, "https://").replace(/\/api\/ws.*$/, "/api");
-        // Boot check: warn if using deprecated v1 (check both baseUrl and apiBaseUrl)
-        if (this.baseUrl.includes("/api/v1") || this.apiBaseUrl.includes("/api/v1"))
-            bootCheck(this.apiBaseUrl);
+        // API base URL for ticket fetching; defaults to /api/<apiVer> for versioned ticket errors.
+        this.apiBaseUrl = options.apiBaseUrl ?? this.baseUrl.replace(/^wss?:\/\//, "https://").replace(/\/ws.*$/, "");
+        bootCheck(this.apiBaseUrl);
     }
     /** Returns the current connection state. */
     get readyState() {
@@ -840,4 +924,7 @@ export class NeuroInfoApiWebsocketClient {
         this.subscribedEvents.clear();
         this.pendingSubscriptions.clear();
     }
+}
+export function isScheduleFinal(status) {
+    return status === "confirmed";
 }

@@ -1,5 +1,3 @@
-import { FetchError, ofetch } from "ofetch";
-
 type Success<T> = { data: T; error: null };
 type Failure = { data: null; error: NeuroApiError };
 export type ApiResult<T> = Success<T> | Failure;
@@ -8,10 +6,11 @@ type IntervalHandle = ReturnType<typeof setInterval>;
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 
 const baseDomain = "neuro.appstun.net";
+const apiVer = "v2";
 
-// Boot check: fires once when any v1 client is constructed
+// Boot check: fires once and warns when this client no longer targets the current public API version.
 let bootCheckFired = false;
-async function bootCheck(baseUrlOrApiBase: string): Promise<void> {
+async function bootCheck(baseUrlOrApiBase: string, clientApiVer: string = apiVer): Promise<void> {
   if (bootCheckFired) return;
   bootCheckFired = true;
   try {
@@ -19,16 +18,130 @@ async function bootCheck(baseUrlOrApiBase: string): Promise<void> {
     const resp = await fetch(infoUrl);
     if (!resp.ok) return;
     const json = await resp.json();
-    const v1Status = json?.data?.versions?.v1;
-    const date = v1Status?.sunset ? new Date(v1Status.sunset) : null;
-    if (v1Status?.status === "deprecated") {
-      console.warn(
-        `\x1b[33m--- NeuroInfoAPI v1 is deprecated and will be turned off${date ? ` on ${date.toISOString()}` : ""}. Please update to v2. ---\x1b[0m`,
-      );
+    const latestVersion = typeof json?.data?.latestVersion === "string" ? json.data.latestVersion : null;
+    const currentVersionInfo = json?.data?.versions?.[clientApiVer] as
+      | { status?: string; message?: string; sunset?: string; docsUrl?: string }
+      | undefined;
+    const latestVersionInfo = latestVersion ? (json?.data?.versions?.[latestVersion] as { docsUrl?: string } | undefined) : undefined;
+    const currentStatus = currentVersionInfo?.status;
+
+    if (latestVersion && latestVersion !== clientApiVer) {
+      switch (currentStatus) {
+        case "deprecated":
+          const sunsetDate = currentVersionInfo?.sunset ? new Date(currentVersionInfo.sunset) : null;
+          console.warn(
+            `\x1b[33m[NeuroInfoAPI] API ${clientApiVer} is deprecated and will be turned off${sunsetDate ? ` on ${sunsetDate.toISOString()}` : ""}.`,
+          );
+          break;
+        case "removed":
+          throw new Error(
+            `API ${clientApiVer} is no longer available. Please update to the latest version. See ${latestVersionInfo?.docsUrl ? `See ${latestVersionInfo.docsUrl}` : ""}`,
+          );
+        default:
+          console.warn(`\x1b[33m[NeuroInfoAPI] API ${clientApiVer} is not the latest version. The latest version is ${latestVersion}.`);
+          break;
+      }
     }
   } catch {
     // Silently ignore — boot check is non-critical
   }
+}
+
+export interface HttpClientOptions {
+  baseURL?: string;
+  timeout?: number;
+  headers?: Record<string, string>;
+}
+
+export interface HttpRequestOptions {
+  query?: Record<string, unknown>;
+  headers?: Record<string, string>;
+  method?: string;
+}
+
+export class HttpRequestError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+    public data?: unknown,
+  ) {
+    super(message);
+    this.name = "HttpRequestError";
+  }
+}
+
+/**
+ * Lightweight fetch wrapper with configurable defaults.
+ */
+export class HttpClient {
+  private baseURL: string;
+  private timeout: number;
+  private defaultHeaders: Record<string, string>;
+
+  constructor(options: HttpClientOptions = {}) {
+    this.baseURL = options.baseURL ?? "";
+    this.timeout = options.timeout ?? 10000;
+    this.defaultHeaders = options.headers ?? {};
+  }
+
+  static create(options: HttpClientOptions): HttpClient {
+    return new HttpClient(options);
+  }
+
+  async request<T>(url: string, options: HttpRequestOptions = {}): Promise<T> {
+    const fullUrl = this.buildUrl(url, options.query);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(fullUrl, {
+        method: options.method ?? "GET",
+        headers: { ...this.defaultHeaders, ...options.headers },
+        signal: controller.signal,
+      });
+
+      let data: unknown;
+      try {
+        data = await response.json();
+      } catch {
+        data = undefined;
+      }
+
+      if (!response.ok) throw new HttpRequestError(`Request failed with status ${response.status}`, response.status, data);
+
+      return data as T;
+    } catch (error) {
+      if (error instanceof HttpRequestError) throw error;
+      if (error instanceof Error && error.name === "AbortError") throw new HttpRequestError("Request timeout");
+      throw new HttpRequestError(error instanceof Error ? error.message : "Network error");
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private buildUrl(path: string, query?: Record<string, unknown>): string {
+    const base = this.baseURL.replace(/\/$/, "");
+    const relativePath = path.startsWith("/") ? path : `/${path}`;
+    const url = new URL(`${base}${relativePath}`);
+
+    if (query) {
+      for (const [key, value] of Object.entries(query)) {
+        if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+      }
+    }
+
+    return url.toString();
+  }
+}
+
+/**
+ * Structured error body returned by the API.
+ */
+export interface ApiErrorBody {
+  code: string;
+  message: string;
+  timestamp: number;
+  path: string;
 }
 
 /**
@@ -39,6 +152,8 @@ export class NeuroApiError extends Error {
     public code: string,
     message: string,
     public status?: number,
+    public timestamp?: number,
+    public path?: string,
   ) {
     super(message);
     this.name = "NeuroApiError";
@@ -50,7 +165,7 @@ export class NeuroApiError extends Error {
  * Provides methods to fetch stream data, VODs, schedules, and subathon information.
  */
 export class NeuroInfoApiClient {
-  public apiInstance: ReturnType<typeof ofetch.create>;
+  public apiInstance: HttpClient;
   private apiToken: string | null = null;
   private baseUrl: string;
 
@@ -60,8 +175,8 @@ export class NeuroInfoApiClient {
    * @param options - Optional configuration options
    */
   constructor(token: string | undefined = undefined, options: NeuroInfoApiClientOptions = {}) {
-    this.baseUrl = options.baseUrl ?? `https://${baseDomain}/api/v1`;
-    this.apiInstance = ofetch.create({
+    this.baseUrl = options.baseUrl ?? `https://${baseDomain}/api/${apiVer}`;
+    this.apiInstance = HttpClient.create({
       baseURL: this.baseUrl,
       timeout: 10000,
       headers: {
@@ -71,19 +186,26 @@ export class NeuroInfoApiClient {
 
     if (token != null) this.setApiToken(token);
 
-    // Boot check: warn if using deprecated v1
-    if (this.baseUrl.includes("/api/v1")) bootCheck(this.baseUrl);
+    bootCheck(this.baseUrl);
   }
 
   /**
    * Parses an error into a NeuroApiError with proper code and message.
    */
   private parseError(error: unknown): NeuroApiError {
-    if (error instanceof FetchError) {
-      const apiError = (error.data as { error?: { code?: string; message?: string } } | undefined)?.error;
-      if (apiError?.code && apiError?.message) return new NeuroApiError(apiError.code, apiError.message, error.response?.status);
-      if (!error.response) return new NeuroApiError("NETWORK", error.message || "Network error");
-      return new NeuroApiError("HTTP_ERROR", `Request failed with status ${error.response.status}`, error.response.status);
+    if (error instanceof HttpRequestError) {
+      const apiError = (error.data as { error?: Partial<ApiErrorBody> & { code?: string; message?: string } } | undefined)?.error;
+      if (apiError?.code && apiError?.message) {
+        return new NeuroApiError(
+          apiError.code,
+          apiError.message,
+          error.status,
+          typeof apiError.timestamp === "number" ? apiError.timestamp : undefined,
+          typeof apiError.path === "string" ? apiError.path : undefined,
+        );
+      }
+      if (error.status == null) return new NeuroApiError("NETWORK", error.message || "Network error");
+      return new NeuroApiError("HTTP_ERROR", `Request failed with status ${error.status}`, error.status);
     }
     return new NeuroApiError("UNKNOWN", String(error));
   }
@@ -96,11 +218,13 @@ export class NeuroInfoApiClient {
   /** Generic request wrapper that handles errors consistently. */
   private async request<T>(url: string, params?: Record<string, any>): Promise<ApiResult<T>> {
     try {
-      const response = await this.apiInstance<T>(url, {
+      const response = await this.apiInstance.request<any>(url, {
         query: params,
         headers: this.apiToken != null ? { Authorization: `Bearer ${this.apiToken}` } : undefined,
       });
-      return { data: response, error: null };
+      // Unwrap { data: T } response envelope
+      const data = response && typeof response === "object" && "data" in response ? response.data : response;
+      return { data: data as T, error: null };
     } catch (error) {
       return { data: null, error: this.parseError(error) };
     }
@@ -122,14 +246,14 @@ export class NeuroInfoApiClient {
    * Fetches a specific VOD by stream ID.
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#specific-vod-1
    */
-  public getVod = (streamId: string) => this.request<TwitchVod>("/twitch/vod", { streamId });
+  public getVod = (id: string) => this.request<TwitchVod>("/twitch/vod", { id });
 
   /**
-   * Fetches the schedule for a specific year and week. If no parameters are provided, fetches the current week's schedule.
+   * Fetches the schedule for a specific week and year.
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#specific-weekly-schedule-1
    */
-  public getSchedule = (year?: number, week?: number) =>
-    this.request<ScheduleResponse>("/schedule", year || week ? { year, week } : undefined);
+  public getSchedule = (week: number, year?: number) =>
+    this.request<ScheduleResponse>("/schedule", { week, ...(year !== undefined ? { year } : {}) });
 
   /**
    * Fetches the latest weekly schedule.
@@ -142,6 +266,11 @@ export class NeuroInfoApiClient {
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#schedule-weeks-index-1
    */
   public getScheduleWeeks = () => this.request<ScheduleWeeksResponse>("/schedule/weeks");
+
+  /**
+   * Fetches the devstream schedule times.
+   */
+  public getDevstreamTimes = () => this.request<number[]>("/devstream/times");
 
   /**
    * Searches schedule entries by message text with optional filters and cursor pagination.
@@ -168,7 +297,7 @@ export class NeuroInfoApiClient {
    * Fetches the current active subathons.
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/subathon.md#current-subathon-1
    */
-  public getCurrentSubathons = () => this.request<SubathonData[]>("/subathon/current");
+  public getCurrentSubathons = () => this.request<SubathonData[]>("/subathon");
 
   /**
    * Fetches subathon data for a specific year.
@@ -180,20 +309,13 @@ export class NeuroInfoApiClient {
    * Fetches the years for which subathon data is available.
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/subathon.md#subathon-years-1
    */
-  public getSubathonYears(detailed: true): Promise<ApiResult<SubathonYearsDetailedResponse>>;
-  public getSubathonYears(detailed?: false): Promise<ApiResult<SubathonYearsResponse>>;
-  public getSubathonYears(detailed: boolean = false): Promise<ApiResult<SubathonYearsResponse | SubathonYearsDetailedResponse>> {
-    return this.request<SubathonYearsResponse | SubathonYearsDetailedResponse>(
-      "/subathon/years",
-      detailed ? { detailed: true } : undefined,
-    );
-  }
+  public getSubathonYears = () => this.request<SubathonYearsResponse>("/subathon/years");
 
   /**
    * Fetches the Neuro-sama blog feed. Requires an API token.
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/blog.md#endpoint
    */
-  public getBlogFeed = (raw: boolean = false) => this.request<BlogFeedResponse>("/blog/feed", raw ? { raw: true } : undefined);
+  public getBlogFeed = (raw: boolean = false) => this.request<BlogFeedData>("/blog", raw ? { raw: true } : undefined);
 }
 
 /**
@@ -533,16 +655,15 @@ export class NeuroInfoApiWebsocketClient {
    */
   constructor(token: string, options: NeuroInfoApiWebsocketClientOptions = {}) {
     this.token = token;
-    this.baseUrl = options.baseUrl ?? `wss://${baseDomain}/api/ws`;
+    this.baseUrl = options.baseUrl ?? `wss://${baseDomain}/api/${apiVer}/ws`;
     this.authMethod = options.authMethod ?? "ticket";
     if (options.autoHeartbeat != null) this.autoHeartbeat = options.autoHeartbeat;
     if (options.heartbeatIntervalMs != null) this.heartbeatIntervalMs = options.heartbeatIntervalMs;
     if (options.heartbeatTimeoutMs != null) this.heartbeatTimeoutMs = options.heartbeatTimeoutMs;
-    // API base URL for ticket fetching (no version prefix)
-    this.apiBaseUrl = options.apiBaseUrl ?? this.baseUrl.replace(/^wss?:\/\//, "https://").replace(/\/api\/ws.*$/, "/api");
+    // API base URL for ticket fetching; defaults to /api/<apiVer> for versioned ticket errors.
+    this.apiBaseUrl = options.apiBaseUrl ?? this.baseUrl.replace(/^wss?:\/\//, "https://").replace(/\/ws.*$/, "");
 
-    // Boot check: warn if using deprecated v1 (check both baseUrl and apiBaseUrl)
-    if (this.baseUrl.includes("/api/v1") || this.apiBaseUrl.includes("/api/v1")) bootCheck(this.apiBaseUrl);
+    bootCheck(this.apiBaseUrl);
   }
 
   /** Returns the current connection state. */
@@ -975,12 +1096,12 @@ export class NeuroInfoApiWebsocketClient {
  */
 export interface NeuroInfoApiWebsocketClientOptions {
   /**
-   * WebSocket server URL. Defaults to `wss://neuro.appstun.net/api/ws`.
+   * WebSocket server URL. Defaults to `wss://neuro.appstun.net/api/<apiVer>/ws`.
    */
   baseUrl?: string;
   /**
    * REST API base URL for ticket fetching. If not provided, automatically derived from baseUrl.
-   * Example: `https://neuro.appstun.net/api`
+   * Example: `https://neuro.appstun.net/api/v2`
    */
   apiBaseUrl?: string;
   /**
@@ -1095,12 +1216,12 @@ export interface WsStreamRaidData {
   viewerCount: number;
 }
 
-/** Event data for scheduleUpdate event. */
+/** Event data for scheduleUpdate on v2 WebSocket connections. */
 export interface WsScheduleUpdateData {
   year: number;
   week: number;
   schedule: ScheduleEntry[];
-  isFinal: boolean;
+  status: ScheduleStatus;
 }
 
 export interface BlogEntryBodySection {
@@ -1125,10 +1246,6 @@ export interface BlogFeedData {
   title: string;
   subtitle: string;
   entries: BlogFeedEntry[];
-}
-
-export interface BlogFeedResponse {
-  data: BlogFeedData;
 }
 
 export interface WsBlogFeedUpdateData extends BlogFeedData {}
@@ -1171,6 +1288,11 @@ interface WsWelcomeMessage {
   data: { sessionId: string };
 }
 
+interface WsAuthSuccessMessage {
+  type: "authSuccess";
+  data: Record<string, never>;
+}
+
 interface WsInvalidMessage {
   type: "invalid";
   data: { reason: WsInvalidReason; message?: string };
@@ -1203,6 +1325,7 @@ interface WsEventMessage<T extends WsEventType = WsEventType> {
 
 export type WsServerMessage =
   | WsWelcomeMessage
+  | WsAuthSuccessMessage
   | WsInvalidMessage
   | WsAddSuccessMessage
   | WsRemoveSuccessMessage
@@ -1244,7 +1367,7 @@ export interface ApiClientEvents {
   streamOnline: TwitchStreamData;
   streamOffline: TwitchStreamData;
   streamUpdate: TwitchStreamData;
-  scheduleUpdate: ScheduleLatestResponse;
+  scheduleUpdate: WsScheduleUpdateData;
   subathonUpdate: SubathonData;
   subathonGoalUpdate: { subathon: SubathonData; goal: SubathonGoal; goalNumber: number };
 }
@@ -1284,11 +1407,17 @@ export interface TwitchVod {
   thumbnailUrl: string;
 }
 
+export type ScheduleStatus = "auto_twitch" | "auto_discord" | "confirmed";
+
+export function isScheduleFinal(status: ScheduleStatus): boolean {
+  return status === "confirmed";
+}
+
 export interface ScheduleResponse {
   year: number;
   week: number;
   schedule: ScheduleEntry[];
-  isFinal: boolean;
+  status: ScheduleStatus;
 }
 
 export interface ScheduleLatestResponse extends ScheduleResponse {
@@ -1317,7 +1446,7 @@ export interface ScheduleSearchResultItem {
     year: number;
     week: number;
     schedule: ScheduleEntry[];
-    isFinal: boolean;
+    status: ScheduleStatus;
   };
 }
 
@@ -1343,8 +1472,7 @@ export interface SubathonData {
   endTimestamp?: number; // Unix timestamp
 }
 
-export type SubathonYearsResponse = number[];
-export type SubathonYearsDetailedResponse = Record<number, string>;
+export type SubathonYearsResponse = Record<number, string>;
 
 export interface SubathonGoal {
   name: string;
