@@ -1,3 +1,7 @@
+> [!IMPORTANT]
+> Your reading the docs for API v1, which will be turned off on **2026-11-01**. <br>
+> Migrate/Update to the latest API version. You find it [here](https://neuro.appstun.net/api/docs).
+
 # NeuroInfoApi Documentation
 
 Welcome to the **NeuroInfoApi** documentation repository! This API provides comprehensive access to Neuro-sama stream data, including schedules, VODs, Twitch information, and subathon details.
