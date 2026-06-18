@@ -169,15 +169,7 @@ console.log(stream.isLive);
 
 ## Official client
 
-The TypeScript/JavaScript client defaults to v2, unwraps `{ data: ... }` automatically, and exposes updated method signatures. See [clients/TypeScript-JavaScript/migrate.md](clients/TypeScript-JavaScript/migrate.md).
-
-To stay on v1 temporarily:
-
-```typescript
-const client = new NeuroInfoApiClient(token, {
-  baseUrl: "https://neuro.appstun.net/api/v1",
-});
-```
+The TypeScript/JavaScript client is v2 too, unwraps `{ data: ... }` automatically, and exposes updated method signatures. See [clients/TypeScript-JavaScript/migrate.md](clients/TypeScript-JavaScript/migrate.md).
 
 ## What did not change
 
