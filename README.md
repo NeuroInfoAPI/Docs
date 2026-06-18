@@ -4,7 +4,7 @@
 > **v2 is now available.** v1 will be turned off on **2026-11-01**. <br>
 > If you're still using `/api/v1/`, please update/migrate to `/api/v2/`. 
 > See the **[v1 -> v2 migration guide](migrate.md)** for endpoint, response, and WebSocket changes. <br>
-> If you still need the v2 docs ... i guess they are [here](https://github.com/NeuroInfoAPI/Docs/tree/v1).
+> If you still need the v1 docs ... i guess they are [here](https://github.com/NeuroInfoAPI/Docs/tree/v1).
 
 Welcome to the **NeuroInfoApi** documentation repository! This API provides comprehensive access to Neuro-sama stream data, including schedules, VODs, Twitch information, and subathon details.
 
