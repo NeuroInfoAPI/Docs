@@ -65,6 +65,10 @@ GET https://neuro.appstun.net/api/v2/subathon
         "1000": { "name": "Goal A", "completed": true, "reached": true },
         "100000": { "name": "Goal B", "completed": false, "reached": true }
       },
+      "subcountMilestones": {
+        "1000": { "timestamp": 1767068070351 },
+        "2000": { "timestamp": 1767069090452 }
+      },
       "isActive": true,
       "startTimestamp": 1764500000000,
       "endTimestamp": null
@@ -155,6 +159,9 @@ Authorization: Bearer YOUR_API_TOKEN
       "9000": { "name": "Swap models with Neuro", "completed": true, "reached": true },
       "20000": { "name": "Neuro original song", "completed": true, "reached": true }
     },
+    "subcountMilestones": {
+      "41000": { "timestamp": 1703123456789 }
+    },
     "isActive": false,
     "startTimestamp": 1703012400000,
     "endTimestamp": null
@@ -170,6 +177,7 @@ Authorization: Bearer YOUR_API_TOKEN
 | `name`           | string  | Name of the subathon                                 | Yes             |
 | `subcount`       | number  | Current subscriber count                             | Yes             |
 | `goals`          | object  | Dictionary of goals with subscriber thresholds       | Yes             |
+| `subcountMilestones` | object  | Subscriber milestones (every 1000 subs) with timestamps | No           |
 | `isActive`       | boolean | Whether the subathon is currently active and running | Yes             |
 | `startTimestamp` | number  | Start of subathon in milliseconds                    | Should          |
 | `endTimestamp`   | number  | End of subathon in milliseconds                      | No              |
@@ -180,6 +188,14 @@ Authorization: Bearer YOUR_API_TOKEN
 | ----------- | ------- | ----------------------------------- | --------------- |
 | `reached`   | boolean | Whether the goal has been reached   | Yes             |
 | `completed` | boolean | Whether the goal has been completed | Yes             |
+
+#### Subcount Milestone Properties
+
+`subcountMilestones` keys are subscriber counts (every 1000 subs). Values contain the Unix timestamp (ms) when that milestone was first reached.
+
+| Property    | Type   | Description                              |
+| ----------- | ------ | ---------------------------------------- |
+| `timestamp` | number | Unix timestamp in milliseconds           |
 
 ## Error Responses
 
@@ -270,4 +286,5 @@ Authorization: Bearer YOUR_API_TOKEN
 - Subathon data is cached and refreshed periodically
 - Multiple active subathons can exist; `/subathon` without `year` returns an array sorted by year (descending)
 - Goal thresholds are defined as integer subscriber counts in the goals object keys
+- `subcountMilestones` are recorded automatically every 1000 subscribers during an active subathon
 

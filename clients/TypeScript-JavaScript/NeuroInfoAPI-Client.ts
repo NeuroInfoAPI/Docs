@@ -1256,6 +1256,7 @@ export interface WsSubathonUpdateData {
   name: string;
   subcount: number;
   goals: { [goal: number]: SubathonGoal };
+  subcountMilestones?: SubathonSubcountMilestone;
   isActive: boolean;
   startTimestamp?: number;
   endTimestamp?: number;
@@ -1467,10 +1468,13 @@ export interface SubathonData {
   name: string;
   subcount: number;
   goals: { [goalNumber: number]: SubathonGoal };
+  subcountMilestones?: SubathonSubcountMilestone;
   isActive: boolean;
   startTimestamp?: number; // Unix timestamp
   endTimestamp?: number; // Unix timestamp
 }
+
+export type SubathonSubcountMilestone = { [milestone: number]: { timestamp: number } };
 
 export type SubathonYearsResponse = Record<number, string>;
 

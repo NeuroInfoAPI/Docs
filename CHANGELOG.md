@@ -3,6 +3,13 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [22.06.2026]
+
+### Added
+
+- Documented `subcountMilestones` on subathon REST responses and WebSocket `subathonUpdate` events ([subathon.md](subathon.md)).
+- Added `subcountMilestones` and `SubathonSubcountMilestone` types to the TypeScript/JavaScript client.
+
 ## [18.06.2026]
 
 ### Added
