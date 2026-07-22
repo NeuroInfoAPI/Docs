@@ -1091,6 +1091,28 @@ export class NeuroInfoApiWebsocketClient {
   }
 }
 
+export namespace Utils {
+  export function isScheduleFinal(status: ScheduleStatus): boolean {
+    return status === "confirmed";
+  }
+
+  export function isScheduleEntryOnline(entry: ScheduleEntry): boolean {
+    return entry.type === "normal" || entry.type === "TBD";
+  }
+
+  export function isScheduleEntryOffline(entry: ScheduleEntry): boolean {
+    return entry.type === "offline" || entry.type === "canceled";
+  }
+
+  export function isScheduleEntryUnknown(entry: ScheduleEntry): boolean {
+    return entry.type === "unknown";
+  }
+
+  export function hasScheduleImage(entry: ScheduleResponse | ScheduleLatestResponse): boolean {
+    return entry.imageUrl !== null && entry.imageUrl.trim() !== "";
+  }
+}
+
 /**
  * Options for the NeuroInfoApiWebsocketClient.
  */
@@ -1222,6 +1244,7 @@ export interface WsScheduleUpdateData {
   week: number;
   schedule: ScheduleEntry[];
   status: ScheduleStatus;
+  imageUrl: string | null;
 }
 
 export interface BlogEntryBodySection {
@@ -1410,15 +1433,12 @@ export interface TwitchVod {
 
 export type ScheduleStatus = "auto_twitch" | "auto_discord" | "confirmed";
 
-export function isScheduleFinal(status: ScheduleStatus): boolean {
-  return status === "confirmed";
-}
-
 export interface ScheduleResponse {
   year: number;
   week: number;
   schedule: ScheduleEntry[];
   status: ScheduleStatus;
+  imageUrl: string | null;
 }
 
 export interface ScheduleLatestResponse extends ScheduleResponse {
@@ -1443,12 +1463,7 @@ export interface ScheduleSearchOptions {
 
 export interface ScheduleSearchResultItem {
   foundDays: number[];
-  data: {
-    year: number;
-    week: number;
-    schedule: ScheduleEntry[];
-    status: ScheduleStatus;
-  };
+  data: ScheduleResponse;
 }
 
 export interface ScheduleSearchResponse {

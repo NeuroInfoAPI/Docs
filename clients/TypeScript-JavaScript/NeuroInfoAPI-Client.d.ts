@@ -19,8 +19,8 @@ export interface HttpRequestOptions {
 }
 export declare class HttpRequestError extends Error {
     status?: number | undefined;
-    data?: unknown | undefined;
-    constructor(message: string, status?: number | undefined, data?: unknown | undefined);
+    data?: unknown;
+    constructor(message: string, status?: number | undefined, data?: unknown);
 }
 /**
  * Lightweight fetch wrapper with configurable defaults.
@@ -312,6 +312,13 @@ export declare class NeuroInfoApiWebsocketClient {
     /** Removes all event listeners and disconnects. */
     destroy(): void;
 }
+export declare namespace Utils {
+    function isScheduleFinal(status: ScheduleStatus): boolean;
+    function isScheduleEntryOnline(entry: ScheduleEntry): boolean;
+    function isScheduleEntryOffline(entry: ScheduleEntry): boolean;
+    function isScheduleEntryUnknown(entry: ScheduleEntry): boolean;
+    function hasScheduleImage(entry: ScheduleResponse | ScheduleLatestResponse): boolean;
+}
 /**
  * Options for the NeuroInfoApiWebsocketClient.
  */
@@ -569,7 +576,6 @@ export interface TwitchVod {
     thumbnailUrl: string;
 }
 export type ScheduleStatus = "auto_twitch" | "auto_discord" | "confirmed";
-export declare function isScheduleFinal(status: ScheduleStatus): boolean;
 export interface ScheduleResponse {
     year: number;
     week: number;

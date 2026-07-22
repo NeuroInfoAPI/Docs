@@ -117,13 +117,13 @@ Schedule responses include a `status` field:
 - `auto_discord` — auto-collected from the Discord schedule channel
 - `auto_twitch` — auto-collected or fetched from Twitch
 
-Use the exported helper `isScheduleFinal(status)` when you need a boolean check.
+Schedule helpers are available through the exported `Utils` namespace.
 
 ```typescript
-import { isScheduleFinal } from "./NeuroInfoAPI-Client";
+import { Utils } from "./NeuroInfoAPI-Client";
 
 const { data } = await client.getLatestSchedule();
-if (data && !isScheduleFinal(data.status)) {
+if (data && !Utils.isScheduleFinal(data.status)) {
   console.log("Schedule may still change");
 }
 ```

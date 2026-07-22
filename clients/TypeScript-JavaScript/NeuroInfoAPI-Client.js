@@ -925,6 +925,26 @@ export class NeuroInfoApiWebsocketClient {
         this.pendingSubscriptions.clear();
     }
 }
-export function isScheduleFinal(status) {
-    return status === "confirmed";
-}
+export var Utils;
+(function (Utils) {
+    function isScheduleFinal(status) {
+        return status === "confirmed";
+    }
+    Utils.isScheduleFinal = isScheduleFinal;
+    function isScheduleEntryOnline(entry) {
+        return entry.type === "normal" || entry.type === "TBD";
+    }
+    Utils.isScheduleEntryOnline = isScheduleEntryOnline;
+    function isScheduleEntryOffline(entry) {
+        return entry.type === "offline" || entry.type === "canceled";
+    }
+    Utils.isScheduleEntryOffline = isScheduleEntryOffline;
+    function isScheduleEntryUnknown(entry) {
+        return entry.type === "unknown";
+    }
+    Utils.isScheduleEntryUnknown = isScheduleEntryUnknown;
+    function hasScheduleImage(entry) {
+        return entry.imageUrl !== null && entry.imageUrl.trim() !== "";
+    }
+    Utils.hasScheduleImage = hasScheduleImage;
+})(Utils || (Utils = {}));
