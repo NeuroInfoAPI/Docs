@@ -96,7 +96,7 @@ interface ScheduleResponse {
 // v2
 type ScheduleStatus = "confirmed" | "auto_discord" | "auto_twitch";
 
-interface ScheduleResponse {
+interface ScheduleData {
   year: number;
   week: number;
   schedule: ScheduleEntry[];
@@ -106,13 +106,13 @@ interface ScheduleResponse {
 
 ### Helper
 
-v2 exports `isScheduleFinal(status)`:
+v2 exposes `isScheduleFinal(status)` through `Utils`:
 
 ```typescript
-import { isScheduleFinal } from "./NeuroInfoAPI-Client";
+import { Utils } from "./NeuroInfoAPI-Client";
 
 const { data } = await client.getLatestSchedule();
-if (data && !isScheduleFinal(data.status)) {
+if (data && !Utils.isScheduleFinal(data.status)) {
   console.log("Schedule may still change");
 }
 ```
@@ -165,11 +165,11 @@ if (schedule.data?.isFinal) console.log("Final schedule");
 ### After
 
 ```typescript
-import { NeuroInfoApiClient, isScheduleFinal } from "neuroinfoapi-client";
+import { NeuroInfoApiClient, Utils } from "neuroinfoapi-client";
 
 const client = new NeuroInfoApiClient("token");
 const schedule = await client.getLatestSchedule();
-if (schedule.data && isScheduleFinal(schedule.data.status)) {
+if (schedule.data && Utils.isScheduleFinal(schedule.data.status)) {
   console.log("Final schedule");
 }
 ```

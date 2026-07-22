@@ -692,15 +692,6 @@ export class NeuroInfoApiWebsocketClient {
         }
         this.sessionId = null;
     }
-    handleMessage(event) {
-        try {
-            const msg = JSON.parse(event.data);
-            this.handleParsedMessage(msg);
-        }
-        catch (error) {
-            this.emitSystem("_error", new NeuroApiError("WS_PARSE_ERROR", "Failed to parse message"));
-        }
-    }
     handleParsedMessage(msg) {
         switch (msg.type) {
             case "event":
@@ -846,16 +837,7 @@ export class NeuroInfoApiWebsocketClient {
             this.websocket.send(JSON.stringify(message));
     }
     isEventType(event) {
-        return (event === "blogFeedUpdate" ||
-            event === "scheduleUpdate" ||
-            event === "subathonUpdate" ||
-            event === "subathonGoalUpdate" ||
-            event === "streamOnline" ||
-            event === "streamUpdate" ||
-            event === "streamOffline" ||
-            event === "secretneuroaccountOnline" ||
-            event === "streamRaidIncoming" ||
-            event === "streamRaidOutgoing");
+        return wsEventTypes.has(event);
     }
     on(event, callback) {
         if (this.isEventType(event)) {
@@ -948,3 +930,18 @@ export var Utils;
     }
     Utils.hasScheduleImage = hasScheduleImage;
 })(Utils || (Utils = {}));
+const wsEventTypes = new Set([
+    "blogFeedUpdate",
+    "scheduleUpdate",
+    "subathonUpdate",
+    "subathonGoalUpdate",
+    "streamOnline",
+    "streamUpdate",
+    "streamOffline",
+    "secretneuroaccountOnline",
+    "streamRaidIncoming",
+    "streamRaidOutgoing",
+]);
+// Deprecated compatibility aliases. Remove with the next major API/client version. Or so... ¯\_(ツ)_/¯
+/** @deprecated Use `Utils.isScheduleFinal` instead. */
+export const isScheduleFinal = Utils.isScheduleFinal;

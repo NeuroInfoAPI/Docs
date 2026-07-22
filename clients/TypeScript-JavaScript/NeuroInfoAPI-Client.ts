@@ -253,13 +253,13 @@ export class NeuroInfoApiClient {
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#specific-weekly-schedule-1
    */
   public getSchedule = (week: number, year?: number) =>
-    this.request<ScheduleResponse>("/schedule", { week, ...(year !== undefined ? { year } : {}) });
+    this.request<ScheduleData>("/schedule", { week, ...(year !== undefined ? { year } : {}) });
 
   /**
    * Fetches the latest weekly schedule.
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#latest-weekly-schedule-1
    */
-  public getLatestSchedule = () => this.request<ScheduleLatestResponse>("/schedule/latest");
+  public getLatestSchedule = () => this.request<LatestScheduleData>("/schedule/latest");
 
   /**
    * Fetches available schedule week numbers grouped by year.
@@ -808,15 +808,6 @@ export class NeuroInfoApiWebsocketClient {
     this.sessionId = null;
   }
 
-  private handleMessage(event: MessageEvent): void {
-    try {
-      const msg = JSON.parse(event.data) as WsServerMessage;
-      this.handleParsedMessage(msg);
-    } catch (error) {
-      this.emitSystem("_error", new NeuroApiError("WS_PARSE_ERROR", "Failed to parse message"));
-    }
-  }
-
   private handleParsedMessage(msg: WsServerMessage): void {
     switch (msg.type) {
       case "event":
@@ -985,18 +976,7 @@ export class NeuroInfoApiWebsocketClient {
   }
 
   private isEventType(event: WsEventType | WsSystemEvent): event is WsEventType {
-    return (
-      event === "blogFeedUpdate" ||
-      event === "scheduleUpdate" ||
-      event === "subathonUpdate" ||
-      event === "subathonGoalUpdate" ||
-      event === "streamOnline" ||
-      event === "streamUpdate" ||
-      event === "streamOffline" ||
-      event === "secretneuroaccountOnline" ||
-      event === "streamRaidIncoming" ||
-      event === "streamRaidOutgoing"
-    );
+    return wsEventTypes.has(event as WsEventType);
   }
 
   /**
@@ -1108,7 +1088,7 @@ export namespace Utils {
     return entry.type === "unknown";
   }
 
-  export function hasScheduleImage(entry: ScheduleResponse | ScheduleLatestResponse): boolean {
+  export function hasScheduleImage(entry: ScheduleData): boolean {
     return entry.imageUrl !== null && entry.imageUrl.trim() !== "";
   }
 }
@@ -1157,29 +1137,7 @@ export interface NeuroInfoApiClientOptions {
 }
 
 /** WebSocket event types available for subscription. */
-export type WsEventType =
-  | "blogFeedUpdate"
-  | "scheduleUpdate"
-  | "subathonUpdate"
-  | "subathonGoalUpdate"
-  | "streamOnline"
-  | "streamUpdate"
-  | "streamOffline"
-  | "secretneuroaccountOnline"
-  | "streamRaidIncoming"
-  | "streamRaidOutgoing";
-
-/** System events emitted by the WebSocket client. */
-export type WsSystemEvent =
-  | "_connected"
-  | "_disconnected"
-  | "_reconnecting"
-  | "_reconnectFailed"
-  | "_error"
-  | "_message"
-  | "_pong"
-  | "_eventAdded"
-  | "_eventRemoved";
+export type WsEventType = keyof WsEventDataMap;
 
 /** Mapping of system events to their callback signatures. */
 export interface WsSystemEventCallbacks {
@@ -1194,6 +1152,9 @@ export interface WsSystemEventCallbacks {
   _eventRemoved: (eventType: WsEventType) => void;
 }
 
+/** System events emitted by the WebSocket client. */
+export type WsSystemEvent = keyof WsSystemEventCallbacks;
+
 export type WsSystemEventCallback<T extends WsSystemEvent> = WsSystemEventCallbacks[T];
 
 export type WsInvalidReason =
@@ -1205,15 +1166,23 @@ export type WsInvalidReason =
   | "invalidToken"
   | "authError";
 
+export interface StreamGame {
+  id: string;
+  name: string;
+}
+
+export interface StreamMetadata {
+  title: string;
+  game: StreamGame;
+  language: string;
+  isMature: boolean;
+}
+
 /** Event data for streamOnline event. */
-export interface WsStreamOnlineData {
+export interface WsStreamOnlineData extends StreamMetadata {
   isLive: true;
   id: string;
-  title: string;
-  game: { id: string; name: string };
-  language: string;
   tags: string[];
-  isMature: boolean;
   viewerCount: number;
   startedAt: number;
   thumbnailUrl: string;
@@ -1224,27 +1193,10 @@ export interface WsStreamOfflineData {
   isLive: false;
 }
 
-/** Event data for streamUpdate event. */
-export interface WsStreamUpdateData {
-  title: string;
-  game: { id: string; name: string };
-  language: string;
-  isMature: boolean;
-}
-
 /** Event data for raid events. */
 export interface WsStreamRaidData {
   channel: { displayName: string; name: string; id: string };
   viewerCount: number;
-}
-
-/** Event data for scheduleUpdate on v2 WebSocket connections. */
-export interface WsScheduleUpdateData {
-  year: number;
-  week: number;
-  schedule: ScheduleEntry[];
-  status: ScheduleStatus;
-  imageUrl: string | null;
 }
 
 export interface BlogEntryBodySection {
@@ -1271,20 +1223,6 @@ export interface BlogFeedData {
   entries: BlogFeedEntry[];
 }
 
-export interface WsBlogFeedUpdateData extends BlogFeedData {}
-
-/** Event data for subathonUpdate event. */
-export interface WsSubathonUpdateData {
-  year: number;
-  name: string;
-  subcount: number;
-  goals: { [goal: number]: SubathonGoal };
-  subcountMilestones?: SubathonSubcountMilestone;
-  isActive: boolean;
-  startTimestamp?: number;
-  endTimestamp?: number;
-}
-
 /** Event data for subathonGoalUpdate event. */
 export interface WsSubathonGoalUpdateData {
   year: number;
@@ -1295,16 +1233,35 @@ export interface WsSubathonGoalUpdateData {
 
 /** Mapping of event types to their data structures. */
 export interface WsEventDataMap {
-  blogFeedUpdate: WsBlogFeedUpdateData;
+  blogFeedUpdate: BlogFeedData;
   streamOnline: WsStreamOnlineData;
   streamOffline: WsStreamOfflineData;
-  streamUpdate: WsStreamUpdateData;
+  streamUpdate: StreamMetadata;
   secretneuroaccountOnline: WsStreamOnlineData;
   streamRaidIncoming: WsStreamRaidData;
   streamRaidOutgoing: WsStreamRaidData;
-  scheduleUpdate: WsScheduleUpdateData;
-  subathonUpdate: WsSubathonUpdateData;
+  scheduleUpdate: ScheduleData;
+  subathonUpdate: SubathonData;
   subathonGoalUpdate: WsSubathonGoalUpdateData;
+}
+
+const wsEventTypes: ReadonlySet<WsEventType> = new Set<WsEventType>([
+  "blogFeedUpdate",
+  "scheduleUpdate",
+  "subathonUpdate",
+  "subathonGoalUpdate",
+  "streamOnline",
+  "streamUpdate",
+  "streamOffline",
+  "secretneuroaccountOnline",
+  "streamRaidIncoming",
+  "streamRaidOutgoing",
+]);
+
+type WsEmptyData = Record<string, never>;
+
+interface WsEventSelection {
+  eventType: WsEventType;
 }
 
 interface WsWelcomeMessage {
@@ -1314,7 +1271,7 @@ interface WsWelcomeMessage {
 
 interface WsAuthSuccessMessage {
   type: "authSuccess";
-  data: Record<string, never>;
+  data: WsEmptyData;
 }
 
 interface WsInvalidMessage {
@@ -1324,12 +1281,12 @@ interface WsInvalidMessage {
 
 interface WsAddSuccessMessage {
   type: "addSuccess";
-  data: { eventType: WsEventType; subscribed: boolean };
+  data: WsEventSelection & { subscribed: boolean };
 }
 
 interface WsRemoveSuccessMessage {
   type: "removeSuccess";
-  data: { eventType: WsEventType; unsubscribed: boolean };
+  data: WsEventSelection & { unsubscribed: boolean };
 }
 
 interface WsListEventsMessage {
@@ -1339,7 +1296,7 @@ interface WsListEventsMessage {
 
 interface WsPongMessage {
   type: "pong";
-  data: Record<string, never>;
+  data: WsEmptyData;
 }
 
 interface WsEventMessage<T extends WsEventType = WsEventType> {
@@ -1359,22 +1316,22 @@ export type WsServerMessage =
 
 interface WsAddEventRequest {
   type: "addEvent";
-  data: { eventType: WsEventType };
+  data: WsEventSelection;
 }
 
 interface WsRemoveEventRequest {
   type: "removeEvent";
-  data: { eventType: WsEventType };
+  data: WsEventSelection;
 }
 
 interface WsListEventsRequest {
   type: "listEvents";
-  data: Record<string, never>;
+  data: WsEmptyData;
 }
 
 interface WsPingRequest {
   type: "ping";
-  data: Record<string, never>;
+  data: WsEmptyData;
 }
 
 type WsClientMessage = WsAddEventRequest | WsRemoveEventRequest | WsListEventsRequest | WsPingRequest;
@@ -1391,7 +1348,7 @@ export interface ApiClientEvents {
   streamOnline: TwitchStreamData;
   streamOffline: TwitchStreamData;
   streamUpdate: TwitchStreamData;
-  scheduleUpdate: WsScheduleUpdateData;
+  scheduleUpdate: LatestScheduleData;
   subathonUpdate: SubathonData;
   subathonGoalUpdate: { subathon: SubathonData; goal: SubathonGoal; goalNumber: number };
 }
@@ -1400,17 +1357,10 @@ export type ApiClientEvent = keyof ApiClientEvents;
 
 export type ApiClientEventCallback<T extends ApiClientEvent> = (data: ApiClientEvents[T]) => void;
 
-export interface TwitchStreamData {
+export interface TwitchStreamData extends Partial<StreamMetadata> {
   isLive: boolean;
   id?: string;
-  title?: string;
-  game?: {
-    id: string;
-    name: string;
-  };
-  language?: string;
   tags?: string[];
-  isMature?: boolean;
   viewerCount?: number;
   startedAt?: number; // Unix timestamp
   thumbnailUrl?: string;
@@ -1433,7 +1383,7 @@ export interface TwitchVod {
 
 export type ScheduleStatus = "auto_twitch" | "auto_discord" | "confirmed";
 
-export interface ScheduleResponse {
+export interface ScheduleData {
   year: number;
   week: number;
   schedule: ScheduleEntry[];
@@ -1441,29 +1391,26 @@ export interface ScheduleResponse {
   imageUrl: string | null;
 }
 
-export interface ScheduleLatestResponse extends ScheduleResponse {
+export interface LatestScheduleData extends ScheduleData {
   hasActiveSubathon: boolean;
 }
 
 export type ScheduleWeeksResponse = Record<number, number[]>;
 
-export interface ScheduleSearchCursor {
-  year: number;
-  week: number;
-}
+export type ScheduleSearchCursor = Pick<ScheduleData, "year" | "week">;
 
 export interface ScheduleSearchOptions {
   query: string;
   year?: number;
   limit?: number;
   sort?: "asc" | "desc";
-  type?: "normal" | "offline" | "canceled" | "TBD" | "unknown";
+  type?: ScheduleEntryType;
   cursor?: ScheduleSearchCursor;
 }
 
 export interface ScheduleSearchResultItem {
   foundDays: number[];
-  data: ScheduleResponse;
+  data: ScheduleData;
 }
 
 export interface ScheduleSearchResponse {
@@ -1471,11 +1418,13 @@ export interface ScheduleSearchResponse {
   results: ScheduleSearchResultItem[];
 }
 
+export type ScheduleEntryType = "normal" | "offline" | "canceled" | "TBD" | "unknown";
+
 export interface ScheduleEntry {
   day: number; // 0-6, Sunday-Saturday
   time: number; // Unix timestamp in milliseconds
   message: string;
-  type: "normal" | "offline" | "canceled" | "TBD" | "unknown";
+  type: ScheduleEntryType;
 }
 
 export interface SubathonData {
@@ -1498,3 +1447,26 @@ export interface SubathonGoal {
   completed: boolean;
   reached: boolean; // dynamically calculated
 }
+
+// Deprecated compatibility aliases. Remove with the next major API/client version. Or so... ¯\_(ツ)_/¯
+
+/** @deprecated Use `Utils.isScheduleFinal` instead. */
+export const isScheduleFinal = Utils.isScheduleFinal;
+
+/** @deprecated Use `StreamMetadata` instead. */
+export type WsStreamUpdateData = StreamMetadata;
+
+/** @deprecated Use `BlogFeedData` instead. */
+export type WsBlogFeedUpdateData = BlogFeedData;
+
+/** @deprecated Use `ScheduleData` instead. */
+export type ScheduleResponse = ScheduleData;
+
+/** @deprecated Use `LatestScheduleData` instead. */
+export type ScheduleLatestResponse = LatestScheduleData;
+
+/** @deprecated Use `ScheduleData` instead. */
+export type WsScheduleUpdateData = ScheduleData;
+
+/** @deprecated Use `SubathonData` instead. */
+export type WsSubathonUpdateData = SubathonData;

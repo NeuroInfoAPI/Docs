@@ -94,12 +94,12 @@ export declare class NeuroInfoApiClient {
      * Fetches the schedule for a specific week and year.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#specific-weekly-schedule-1
      */
-    getSchedule: (week: number, year?: number) => Promise<ApiResult<ScheduleResponse>>;
+    getSchedule: (week: number, year?: number) => Promise<ApiResult<ScheduleData>>;
     /**
      * Fetches the latest weekly schedule.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#latest-weekly-schedule-1
      */
-    getLatestSchedule: () => Promise<ApiResult<ScheduleLatestResponse>>;
+    getLatestSchedule: () => Promise<ApiResult<LatestScheduleData>>;
     /**
      * Fetches available schedule week numbers grouped by year.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#schedule-weeks-index-1
@@ -273,7 +273,6 @@ export declare class NeuroInfoApiWebsocketClient {
     private connectWithUrl;
     /** Disconnects from the WebSocket server. */
     disconnect(): void;
-    private handleMessage;
     private handleParsedMessage;
     private handleEventMessage;
     private handleClose;
@@ -317,7 +316,7 @@ export declare namespace Utils {
     function isScheduleEntryOnline(entry: ScheduleEntry): boolean;
     function isScheduleEntryOffline(entry: ScheduleEntry): boolean;
     function isScheduleEntryUnknown(entry: ScheduleEntry): boolean;
-    function hasScheduleImage(entry: ScheduleResponse | ScheduleLatestResponse): boolean;
+    function hasScheduleImage(entry: ScheduleData): boolean;
 }
 /**
  * Options for the NeuroInfoApiWebsocketClient.
@@ -361,9 +360,7 @@ export interface NeuroInfoApiClientOptions {
     baseUrl?: string;
 }
 /** WebSocket event types available for subscription. */
-export type WsEventType = "blogFeedUpdate" | "scheduleUpdate" | "subathonUpdate" | "subathonGoalUpdate" | "streamOnline" | "streamUpdate" | "streamOffline" | "secretneuroaccountOnline" | "streamRaidIncoming" | "streamRaidOutgoing";
-/** System events emitted by the WebSocket client. */
-export type WsSystemEvent = "_connected" | "_disconnected" | "_reconnecting" | "_reconnectFailed" | "_error" | "_message" | "_pong" | "_eventAdded" | "_eventRemoved";
+export type WsEventType = keyof WsEventDataMap;
 /** Mapping of system events to their callback signatures. */
 export interface WsSystemEventCallbacks {
     _connected: (sessionId: string) => void;
@@ -376,20 +373,25 @@ export interface WsSystemEventCallbacks {
     _eventAdded: (eventType: WsEventType) => void;
     _eventRemoved: (eventType: WsEventType) => void;
 }
+/** System events emitted by the WebSocket client. */
+export type WsSystemEvent = keyof WsSystemEventCallbacks;
 export type WsSystemEventCallback<T extends WsSystemEvent> = WsSystemEventCallbacks[T];
 export type WsInvalidReason = "malformed" | "unauthenticated" | "missingEventtype" | "invalidEventtype" | "missingToken" | "invalidToken" | "authError";
+export interface StreamGame {
+    id: string;
+    name: string;
+}
+export interface StreamMetadata {
+    title: string;
+    game: StreamGame;
+    language: string;
+    isMature: boolean;
+}
 /** Event data for streamOnline event. */
-export interface WsStreamOnlineData {
+export interface WsStreamOnlineData extends StreamMetadata {
     isLive: true;
     id: string;
-    title: string;
-    game: {
-        id: string;
-        name: string;
-    };
-    language: string;
     tags: string[];
-    isMature: boolean;
     viewerCount: number;
     startedAt: number;
     thumbnailUrl: string;
@@ -397,16 +399,6 @@ export interface WsStreamOnlineData {
 /** Event data for streamOffline event. */
 export interface WsStreamOfflineData {
     isLive: false;
-}
-/** Event data for streamUpdate event. */
-export interface WsStreamUpdateData {
-    title: string;
-    game: {
-        id: string;
-        name: string;
-    };
-    language: string;
-    isMature: boolean;
 }
 /** Event data for raid events. */
 export interface WsStreamRaidData {
@@ -416,14 +408,6 @@ export interface WsStreamRaidData {
         id: string;
     };
     viewerCount: number;
-}
-/** Event data for scheduleUpdate on v2 WebSocket connections. */
-export interface WsScheduleUpdateData {
-    year: number;
-    week: number;
-    schedule: ScheduleEntry[];
-    status: ScheduleStatus;
-    imageUrl: string | null;
 }
 export interface BlogEntryBodySection {
     header: string;
@@ -446,21 +430,6 @@ export interface BlogFeedData {
     subtitle: string;
     entries: BlogFeedEntry[];
 }
-export interface WsBlogFeedUpdateData extends BlogFeedData {
-}
-/** Event data for subathonUpdate event. */
-export interface WsSubathonUpdateData {
-    year: number;
-    name: string;
-    subcount: number;
-    goals: {
-        [goal: number]: SubathonGoal;
-    };
-    subcountMilestones?: SubathonSubcountMilestone;
-    isActive: boolean;
-    startTimestamp?: number;
-    endTimestamp?: number;
-}
 /** Event data for subathonGoalUpdate event. */
 export interface WsSubathonGoalUpdateData {
     year: number;
@@ -470,16 +439,20 @@ export interface WsSubathonGoalUpdateData {
 }
 /** Mapping of event types to their data structures. */
 export interface WsEventDataMap {
-    blogFeedUpdate: WsBlogFeedUpdateData;
+    blogFeedUpdate: BlogFeedData;
     streamOnline: WsStreamOnlineData;
     streamOffline: WsStreamOfflineData;
-    streamUpdate: WsStreamUpdateData;
+    streamUpdate: StreamMetadata;
     secretneuroaccountOnline: WsStreamOnlineData;
     streamRaidIncoming: WsStreamRaidData;
     streamRaidOutgoing: WsStreamRaidData;
-    scheduleUpdate: WsScheduleUpdateData;
-    subathonUpdate: WsSubathonUpdateData;
+    scheduleUpdate: ScheduleData;
+    subathonUpdate: SubathonData;
     subathonGoalUpdate: WsSubathonGoalUpdateData;
+}
+type WsEmptyData = Record<string, never>;
+interface WsEventSelection {
+    eventType: WsEventType;
 }
 interface WsWelcomeMessage {
     type: "welcome";
@@ -489,7 +462,7 @@ interface WsWelcomeMessage {
 }
 interface WsAuthSuccessMessage {
     type: "authSuccess";
-    data: Record<string, never>;
+    data: WsEmptyData;
 }
 interface WsInvalidMessage {
     type: "invalid";
@@ -500,15 +473,13 @@ interface WsInvalidMessage {
 }
 interface WsAddSuccessMessage {
     type: "addSuccess";
-    data: {
-        eventType: WsEventType;
+    data: WsEventSelection & {
         subscribed: boolean;
     };
 }
 interface WsRemoveSuccessMessage {
     type: "removeSuccess";
-    data: {
-        eventType: WsEventType;
+    data: WsEventSelection & {
         unsubscribed: boolean;
     };
 }
@@ -521,7 +492,7 @@ interface WsListEventsMessage {
 }
 interface WsPongMessage {
     type: "pong";
-    data: Record<string, never>;
+    data: WsEmptyData;
 }
 interface WsEventMessage<T extends WsEventType = WsEventType> {
     type: "event";
@@ -536,7 +507,7 @@ export interface ApiClientEvents {
     streamOnline: TwitchStreamData;
     streamOffline: TwitchStreamData;
     streamUpdate: TwitchStreamData;
-    scheduleUpdate: WsScheduleUpdateData;
+    scheduleUpdate: LatestScheduleData;
     subathonUpdate: SubathonData;
     subathonGoalUpdate: {
         subathon: SubathonData;
@@ -546,17 +517,10 @@ export interface ApiClientEvents {
 }
 export type ApiClientEvent = keyof ApiClientEvents;
 export type ApiClientEventCallback<T extends ApiClientEvent> = (data: ApiClientEvents[T]) => void;
-export interface TwitchStreamData {
+export interface TwitchStreamData extends Partial<StreamMetadata> {
     isLive: boolean;
     id?: string;
-    title?: string;
-    game?: {
-        id: string;
-        name: string;
-    };
-    language?: string;
     tags?: string[];
-    isMature?: boolean;
     viewerCount?: number;
     startedAt?: number;
     thumbnailUrl?: string;
@@ -576,42 +540,40 @@ export interface TwitchVod {
     thumbnailUrl: string;
 }
 export type ScheduleStatus = "auto_twitch" | "auto_discord" | "confirmed";
-export interface ScheduleResponse {
+export interface ScheduleData {
     year: number;
     week: number;
     schedule: ScheduleEntry[];
     status: ScheduleStatus;
     imageUrl: string | null;
 }
-export interface ScheduleLatestResponse extends ScheduleResponse {
+export interface LatestScheduleData extends ScheduleData {
     hasActiveSubathon: boolean;
 }
 export type ScheduleWeeksResponse = Record<number, number[]>;
-export interface ScheduleSearchCursor {
-    year: number;
-    week: number;
-}
+export type ScheduleSearchCursor = Pick<ScheduleData, "year" | "week">;
 export interface ScheduleSearchOptions {
     query: string;
     year?: number;
     limit?: number;
     sort?: "asc" | "desc";
-    type?: "normal" | "offline" | "canceled" | "TBD" | "unknown";
+    type?: ScheduleEntryType;
     cursor?: ScheduleSearchCursor;
 }
 export interface ScheduleSearchResultItem {
     foundDays: number[];
-    data: ScheduleResponse;
+    data: ScheduleData;
 }
 export interface ScheduleSearchResponse {
     nextCursor: ScheduleSearchCursor | null;
     results: ScheduleSearchResultItem[];
 }
+export type ScheduleEntryType = "normal" | "offline" | "canceled" | "TBD" | "unknown";
 export interface ScheduleEntry {
     day: number;
     time: number;
     message: string;
-    type: "normal" | "offline" | "canceled" | "TBD" | "unknown";
+    type: ScheduleEntryType;
 }
 export interface SubathonData {
     year: number;
@@ -636,4 +598,18 @@ export interface SubathonGoal {
     completed: boolean;
     reached: boolean;
 }
+/** @deprecated Use `Utils.isScheduleFinal` instead. */
+export declare const isScheduleFinal: typeof Utils.isScheduleFinal;
+/** @deprecated Use `StreamMetadata` instead. */
+export type WsStreamUpdateData = StreamMetadata;
+/** @deprecated Use `BlogFeedData` instead. */
+export type WsBlogFeedUpdateData = BlogFeedData;
+/** @deprecated Use `ScheduleData` instead. */
+export type ScheduleResponse = ScheduleData;
+/** @deprecated Use `LatestScheduleData` instead. */
+export type ScheduleLatestResponse = LatestScheduleData;
+/** @deprecated Use `ScheduleData` instead. */
+export type WsScheduleUpdateData = ScheduleData;
+/** @deprecated Use `SubathonData` instead. */
+export type WsSubathonUpdateData = SubathonData;
 export {};

@@ -10,6 +10,7 @@ It's definitely time to write a changelog for "important" changes to the docs. <
 - Added weekly schedule `imageUrl` values to API v2 REST responses, searches, and `scheduleUpdate` WebSocket events.
 - Added the public `GET /schedule/image` endpoint, which always redirects to the currently active image URL for a week.
 - Grouped schedule helper functions under the exported `Utils` namespace in the TypeScript/JavaScript client.
+- Consolidated duplicate REST and WebSocket payload definitions into shared client data types while retaining the previous names as deprecated aliases.
 
 ## [22.06.2026]
 
