@@ -15,6 +15,10 @@
 
 `GET https://neuro.appstun.net/api/v2/schedule/latest`
 
+### Schedule Image
+
+`GET https://neuro.appstun.net/api/v2/schedule/image`
+
 ### Search Weekly Schedules
 
 `GET https://neuro.appstun.net/api/v2/schedule/search`
@@ -29,7 +33,7 @@
 
 ## Description
 
-Access weekly schedule data from the database. Use the specific-week endpoint for exact calendar weeks, the latest endpoint for the most recent published schedule, the search endpoint for message-based lookups with cursor pagination, and the weeks endpoint to list available weeks per year. For devstream timestamps, see [Devstream Times](#devstream-times) below.
+Access weekly schedule data from the database. Use the specific-week endpoint for exact calendar weeks, the latest endpoint for the most recent published schedule, the image endpoint to display a weekly schedule image, the search endpoint for message-based lookups with cursor pagination, and the weeks endpoint to list available weeks per year. For devstream timestamps, see [Devstream Times](#devstream-times) below.
 
 ## Endpoints Details
 
@@ -84,7 +88,8 @@ Authorization: Bearer YOUR_API_TOKEN
         "type": "normal"
       }
     ],
-    "status": "confirmed"
+    "status": "confirmed",
+    "imageUrl": "https://orqd3anhk8.ufs.sh/f/bmdmWPQm3hYTnCxdeYWWFYQZEmD9yiJ1NU8PwMe2B7oGjuLO"
   }
 }
 ```
@@ -126,10 +131,47 @@ GET https://neuro.appstun.net/api/v2/schedule/latest
       { "day": 2, "time": 1760464800000, "message": "Neuro Stream", "type": "normal" }
     ],
     "status": "confirmed",
+    "imageUrl": "https://orqd3anhk8.ufs.sh/f/bmdmWPQm3hYTFClut4aKTq0eL82y73cDPkUrwznbpau9fiCI",
     "hasActiveSubathon": false
   }
 }
 ```
+
+### Schedule Image
+
+#### Endpoint
+
+`GET https://neuro.appstun.net/api/v2/schedule/image`
+
+#### Description
+
+Redirects to the currently active image URL for a given schedule week. This endpoint is intended for image consumers such as `<img>` elements and embeds.
+
+#### Authentication
+
+**Not required** - This is a public endpoint.
+
+#### Parameters
+
+| Parameter | Type    | Required | Description                                     |
+| --------- | ------- | -------- | ----------------------------------------------- |
+| `week`    | integer | Yes      | Calendar week number (1-53)                     |
+| `year`    | integer | No       | Year (defaults to current year if not provided) |
+
+#### Request Example
+
+```http
+GET https://neuro.appstun.net/api/v2/schedule/image?week=25&year=2024
+```
+
+#### Responses
+
+- `302 Found`: Redirects to the current image URL for the requested week.
+- `404 Not Found`: No image is available for the requested week.
+- `400 Bad Request`: The query parameters are missing or invalid.
+
+> [!NOTE]
+> The direct `imageUrl` can change. Use this endpoint when you always need the currently active URL: its address stays the same for a week while its redirect target is resolved on every request. The endpoint itself is intentionally not returned as the `imageUrl` value in schedule responses.
 
 ### Search Weekly Schedules
 
@@ -198,7 +240,8 @@ Authorization: Bearer YOUR_API_TOKEN
               "type": "normal"
             }
           ],
-          "status": "confirmed"
+          "status": "confirmed",
+          "imageUrl": "https://orqd3anhk8.ufs.sh/f/bmdmWPQm3hYTEWiE7FoIH31bXmfDn0hwFuzeOyrE9d8Vqi45"
         }
       }
     ]
@@ -226,7 +269,8 @@ Authorization: Bearer YOUR_API_TOKEN
               "type": "normal"
             }
           ],
-          "status": "confirmed"
+          "status": "confirmed",
+          "imageUrl": null
         }
       }
     ]
@@ -317,13 +361,14 @@ GET https://neuro.appstun.net/api/v2/schedule/weeks
 
 #### Response Properties
 
-| Property            | Type    | Description                                                    | Always included   |
-| ------------------- | ------- | -------------------------------------------------------------- | ----------------- |
-| `year`              | number  | Year of the schedule                                           | Yes               |
-| `week`              | number  | Calendar week number (1-53)                                    | Yes               |
-| `schedule`          | array   | Array of schedule entries (see above)                          | Yes               |
-| `status`            | string  | Schedule status: `auto_twitch`, `auto_discord`, or `confirmed` | Yes               |
-| `hasActiveSubathon` | boolean | Whether there is an active subathon running                    | Only on `/latest` |
+| Property            | Type             | Description                                                      | Always included   |
+| ------------------- | ---------------- | ---------------------------------------------------------------- | ----------------- |
+| `year`              | number           | Year of the schedule                                             | Yes               |
+| `week`              | number           | Calendar week number (1-53)                                      | Yes               |
+| `schedule`          | array            | Array of schedule entries (see above)                            | Yes               |
+| `status`            | string           | Schedule status: `auto_twitch`, `auto_discord`, or `confirmed`   | Yes               |
+| `imageUrl`          | string or `null` | Current weekly schedule image URL, or `null` if none is available | Yes               |
+| `hasActiveSubathon` | boolean          | Whether there is an active subathon running                      | Only on `/latest` |
 
 #### Schedule Status Values
 
@@ -335,6 +380,9 @@ GET https://neuro.appstun.net/api/v2/schedule/weeks
 
 > [!NOTE]
 > `confirmed` is the only final status. `auto_discord` can replace an `auto_twitch` schedule, but not a `confirmed` one. `auto_twitch` only overwrites an existing `auto_twitch` schedule (or fills an empty week).
+
+> [!TIP]
+> To always display the current image, use the public [Schedule Image](#schedule-image) redirect endpoint. It resolves the latest `imageUrl` for that week on every request.
 
 ## Error Responses
 

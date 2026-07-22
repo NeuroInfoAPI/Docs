@@ -27,6 +27,16 @@ _Full docs of endpoint: [schedule.md](schedule.md)_
 - **Parameters**: None
 - **Public**: Yes
 
+### Schedule Image
+
+`GET /schedule/image`
+
+- **Purpose**: Always redirect to the currently active image URL for a schedule week (`302`, or `404` if unavailable)
+- **Parameters**: `week` (required), `year` (optional)
+- **Public**: Yes
+- **Example**: `/schedule/image?week=25&year=2024`
+- **Note**: The endpoint address stays the same even when the direct `imageUrl` changes; it is intentionally not returned as the `imageUrl` value
+
 ### Search Weekly Schedules
 
 `GET /schedule/search`

@@ -42,6 +42,7 @@
 ## Public Endpoints (no auth required)
 
 - `GET /api/v2/schedule/latest` - Latest weekly schedule
+- `GET /api/v2/schedule/image` - Weekly schedule image redirect
 - `GET /api/v2/schedule/weeks` - Available schedule week numbers grouped by year
 - `GET /api/v2/devstream/times` - Devstream timestamps
 - `GET /api/v2/twitch/stream` - Current stream information

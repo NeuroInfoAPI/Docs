@@ -416,6 +416,7 @@ export interface WsScheduleUpdateData {
     week: number;
     schedule: ScheduleEntry[];
     status: ScheduleStatus;
+    imageUrl: string | null;
 }
 export interface BlogEntryBodySection {
     header: string;
@@ -574,6 +575,7 @@ export interface ScheduleResponse {
     week: number;
     schedule: ScheduleEntry[];
     status: ScheduleStatus;
+    imageUrl: string | null;
 }
 export interface ScheduleLatestResponse extends ScheduleResponse {
     hasActiveSubathon: boolean;
@@ -593,12 +595,7 @@ export interface ScheduleSearchOptions {
 }
 export interface ScheduleSearchResultItem {
     foundDays: number[];
-    data: {
-        year: number;
-        week: number;
-        schedule: ScheduleEntry[];
-        status: ScheduleStatus;
-    };
+    data: ScheduleResponse;
 }
 export interface ScheduleSearchResponse {
     nextCursor: ScheduleSearchCursor | null;

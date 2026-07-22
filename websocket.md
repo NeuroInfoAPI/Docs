@@ -165,7 +165,8 @@ This message protocol is used by `WSS /api/v2/ws`.
       "year": 2026,
       "week": 8,
       "schedule": [],
-      "status": "confirmed"
+      "status": "confirmed",
+      "imageUrl": "https://orqd3anhk8.ufs.sh/f/bmdmWPQm3hYTFClut4aKTq0eL82y73cDPkUrwznbpau9fiCI"
     },
     "timestamp": 1766924114000
   }
@@ -173,7 +174,7 @@ This message protocol is used by `WSS /api/v2/ws`.
 ```
 
 > [!NOTE]
-> `scheduleUpdate` uses `status` (`auto_twitch`, `auto_discord`, `confirmed`). See [Schedule API](schedule.md#schedule-status-values).
+> `scheduleUpdate` uses `status` (`auto_twitch`, `auto_discord`, `confirmed`) and includes the current weekly `imageUrl` (or `null`). Image-only changes also emit a v2 update. To always resolve the currently active image URL, use the [Schedule Image redirect](schedule.md#schedule-image).
 
 ##### Blog Feed Update Event
 
