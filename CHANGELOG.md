@@ -3,6 +3,12 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [26.08.2026]
+
+### Changed
+
+- Clarified that `scheduleUpdate` WebSocket events can contain past schedules and consumers must filter them by `year` and `week` ([websocket.md](websocket.md)).
+
 ## [22.07.2026]
 
 ### Added

@@ -176,6 +176,9 @@ This message protocol is used by `WSS /api/v2/ws`.
 > [!NOTE]
 > `scheduleUpdate` uses `status` (`auto_twitch`, `auto_discord`, `confirmed`) and includes the current weekly `imageUrl` (or `null`). Image-only changes also emit a v2 update. To always resolve the currently active image URL, use the [Schedule Image redirect](schedule.md#schedule-image).
 
+> [!IMPORTANT]
+> A `scheduleUpdate` can refer to any weekly schedule, including a past week. The WebSocket server and client library forward these events unchanged. Use `eventData.year` and `eventData.week` to filter events for the schedules relevant to your application.
+
 ##### Blog Feed Update Event
 
 ```json
