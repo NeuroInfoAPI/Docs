@@ -2,6 +2,10 @@
 
 # X Feed API Documentation
 
+
+> [!WARNING]
+> Due to [legal troubles of Nitter](https://github.com/zedeus/nitter/issues/1442#issuecomment-5413651441), this endpoint may stop working at any time. It is not guaranteed to be maintained or supported. Use at your own risk.
+
 ## Endpoint
 
 `GET https://neuro.appstun.net/api/v2/x-feed`

@@ -215,6 +215,9 @@ This message protocol is used by `WSS /api/v2/ws`.
 
 ##### X Feed Update Event
 
+> [!WARNING]
+> Due to [legal troubles of Nitter](https://github.com/zedeus/nitter/issues/1442#issuecomment-5413651441), this endpoint may stop working at any time. It is not guaranteed to be maintained or supported. Use at your own risk.
+
 Only entries that are new or changed since the previous refresh are included.
 
 ```json
@@ -317,19 +320,19 @@ wsClient.nitterHost = "https://your-public-nitter.example";
 
 #### Available Event Types
 
-| Event Type                 | Description                                                   |
-| -------------------------- | ------------------------------------------------------------- |
-| `blogFeedUpdate`           | Blog feed changed; payload contains only changed/new entries  |
+| Event Type                 | Description                                                            |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `blogFeedUpdate`           | Blog feed changed; payload contains only changed/new entries           |
 | `xFeedUpdate`              | X feed changed; payload identifies the account and changed/new entries |
-| `scheduleUpdate`           | Weekly schedule was updated                                   |
-| `subathonUpdate`           | Subathon state changed                                        |
-| `subathonGoalUpdate`       | Subathon goal status changed                                  |
-| `streamOnline`             | Stream started                                                |
-| `streamUpdate`             | Stream metadata changed (throttled)                           |
-| `streamOffline`            | Stream ended                                                  |
-| `secretneuroaccountOnline` | secretneuroaccount went live (same payload as `streamOnline`) |
-| `streamRaidIncoming`       | Raid incoming event                                           |
-| `streamRaidOutgoing`       | Raid outgoing event                                           |
+| `scheduleUpdate`           | Weekly schedule was updated                                            |
+| `subathonUpdate`           | Subathon state changed                                                 |
+| `subathonGoalUpdate`       | Subathon goal status changed                                           |
+| `streamOnline`             | Stream started                                                         |
+| `streamUpdate`             | Stream metadata changed (throttled)                                    |
+| `streamOffline`            | Stream ended                                                           |
+| `secretneuroaccountOnline` | secretneuroaccount went live (same payload as `streamOnline`)          |
+| `streamRaidIncoming`       | Raid incoming event                                                    |
+| `streamRaidOutgoing`       | Raid outgoing event                                                    |
 
 ## Error Responses
 

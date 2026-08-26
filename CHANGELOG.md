@@ -15,6 +15,9 @@ It's definitely time to write a changelog for "important" changes to the docs. <
 ### Changed
 
 - Clarified that `scheduleUpdate` WebSocket events can contain past schedules and consumers must filter them by `year` and `week` ([websocket.md](websocket.md)).
+- Hating X: 
+  - Updated the X Feed API docs to reflect that it may stop working at any time due to Nitter legal issues ([x-feed.md](x-feed.md), [websocket.md](websocket.md)).
+  - Updated the README to reflect that the X Feed API may not work ([README.md](README.md)).
 
 ## [22.07.2026]
 

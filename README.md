@@ -21,7 +21,7 @@ This repository contains documentation for all public API areas:
 - **[Twitch API](twitch.md)** - Stream status and VOD data
 - **[Subathon API](subathon.md)** - Subathon goals and progress
 - **[Blog API](blog.md)** - Neuro-sama blog feed and entry content
-- **[X Feed API](x-feed.md)** - Cached X posts, replies, retweets, and media links
+- **[X Feed API](x-feed.md)** - Cached X posts, replies, retweets, and media links (may not work)
 - **[WebSocket API](websocket.md)** - Real-time events and WebSocket authentication
 - **[Prebuild Clients](clients/README.md)** - ready-to-use clients for your project
 - **[v1 → v2 Migration Guide](migrate.md)** - upgrade paths for REST, WebSocket, and responses
@@ -63,7 +63,7 @@ This repository contains documentation for all public API areas:
 - Authentication required for JSON endpoint
 - Real-time update event for changed feed entries
 
-### X Feed
+### X Feed (may not work)
 
 - Cached feeds for `NeurosamaAI`, `EvilNeuroAI`, and `Vedal987`
 - Structured tweet, reply, and retweet entries
