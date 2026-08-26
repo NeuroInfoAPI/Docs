@@ -5,6 +5,13 @@ It's definitely time to write a changelog for "important" changes to the docs. <
 
 ## [26.08.2026]
 
+### Added
+
+- Added documentation for the authenticated `GET /x-feed?user=...` endpoint for `NeurosamaAI`, `EvilNeuroAI`, and `Vedal987`, including reply/retweet data, structured image/video media, and the public Nitter host placeholder metadata ([x-feed.md](x-feed.md), [quickInfo.md](quickInfo.md), [needsAuth.md](needsAuth.md), [errors.md](errors.md)).
+- Added `getXFeed()` and its exported response types to the TypeScript/JavaScript client. Its optional third argument replaces the Nitter host placeholder automatically ([NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts), [NeuroInfoAPI-Client.js](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.js), [NeuroInfoAPI-Client.d.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.d.ts)).
+- Added the `xFeedUpdate` WebSocket event and typed client listener support. The WebSocket client's optional `nitterHost` property replaces Nitter host placeholders in event entries ([websocket.md](websocket.md), [client README](clients/TypeScript-JavaScript/README.md)).
+- Reply entries can include best-effort FxTwitter parent post data under `replyTo.post`. RSS caching stays independent from enrichment, temporary failures use a retry cooldown, and FxTwitter caches are bounded.
+
 ### Changed
 
 - Clarified that `scheduleUpdate` WebSocket events can contain past schedules and consumers must filter them by `year` and `week` ([websocket.md](websocket.md)).

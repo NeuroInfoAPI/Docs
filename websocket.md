@@ -19,7 +19,7 @@
 
 ## Description
 
-The WebSocket API provides real-time events for stream, schedule, and subathon updates. Authentication is required. Browser clients should use ticket-based auth. Server-to-server clients can use direct `Authorization: Bearer` auth during handshake.
+The WebSocket API provides real-time events for stream, feed, schedule, and subathon updates. Authentication is required. Browser clients should use ticket-based auth. Server-to-server clients can use direct `Authorization: Bearer` auth during handshake.
 
 ## Endpoints Details
 
@@ -213,6 +213,57 @@ This message protocol is used by `WSS /api/v2/ws`.
 }
 ```
 
+##### X Feed Update Event
+
+Only entries that are new or changed since the previous refresh are included.
+
+```json
+{
+  "type": "event",
+  "data": {
+    "eventType": "xFeedUpdate",
+    "eventData": {
+      "user": "NeurosamaAI",
+      "entries": [
+        {
+          "id": "2089666074224546277",
+          "type": "reply",
+          "replyTo": {
+            "username": "EvilNeuroAI",
+            "post": {
+              "id": "2089660000000000000",
+              "content": "Example parent post",
+              "createdTimestamp": 1787049000000,
+              "media": []
+            }
+          },
+          "author": {
+            "username": "NeurosamaAI"
+          },
+          "url": "<some-public-nitter-instance-host>/NeurosamaAI/status/2089666074224546277#m",
+          "createdTimestamp": 1787050190000,
+          "content": "Example reply",
+          "media": []
+        }
+      ],
+      "metadata": {
+        "placeholders": {
+          "nitterHost": "<some-public-nitter-instance-host>"
+        }
+      }
+    },
+    "timestamp": 1787050195000
+  }
+}
+```
+
+The TypeScript/JavaScript client exposes an optional `nitterHost` property. Set it once on the WebSocket client to replace Nitter URL placeholders in every `xFeedUpdate`:
+
+```typescript
+const wsClient = new NeuroInfoApiWebsocketClient("your-api-token-here");
+wsClient.nitterHost = "https://your-public-nitter.example";
+```
+
 ##### Subscription Responses
 
 ```json
@@ -242,6 +293,7 @@ This message protocol is used by `WSS /api/v2/ws`.
     "subscribedEvents": ["streamOnline"],
     "availableEvents": [
       "blogFeedUpdate",
+      "xFeedUpdate",
       "scheduleUpdate",
       "subathonUpdate",
       "subathonGoalUpdate",
@@ -268,6 +320,7 @@ This message protocol is used by `WSS /api/v2/ws`.
 | Event Type                 | Description                                                   |
 | -------------------------- | ------------------------------------------------------------- |
 | `blogFeedUpdate`           | Blog feed changed; payload contains only changed/new entries  |
+| `xFeedUpdate`              | X feed changed; payload identifies the account and changed/new entries |
 | `scheduleUpdate`           | Weekly schedule was updated                                   |
 | `subathonUpdate`           | Subathon state changed                                        |
 | `subathonGoalUpdate`       | Subathon goal status changed                                  |
@@ -359,5 +412,7 @@ Possible `reason` values:
 - Maximum 5 active WebSocket connections per user (unlimited tokens excluded)
 - `streamUpdate` events are throttled to at most one broadcast every 2 seconds
 - `blogFeedUpdate` broadcasts only changed or newly added entries
+- `xFeedUpdate` broadcasts only changed or newly added entries for each supported X account
+- A new reply can be broadcast again when best-effort `replyTo.post` enrichment completes
 - Keepalive pings are enabled; idle timeout is 60 seconds
 - For lightweight client-side liveness checks, prefer `ping`/`pong` over `listEvents`

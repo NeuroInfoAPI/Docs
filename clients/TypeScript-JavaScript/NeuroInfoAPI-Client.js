@@ -196,6 +196,12 @@ export class NeuroInfoApiClient {
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/blog.md#endpoint
          */
         this.getBlogFeed = (raw = false) => this.request("/blog", raw ? { raw: true } : undefined);
+        /**
+         * Fetches the cached X feed for one of the supported accounts. Requires an API token.
+         * Pass a public Nitter host as the third argument to replace URL placeholders automatically.
+         * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/x-feed.md#endpoint
+         */
+        this.getXFeed = (user, raw = false, nitterHost) => this.request("/x-feed", { user, ...(raw ? { raw: true } : {}) }, (response) => replaceXFeedHost({ entries: response.data, metadata: response.metadata }, nitterHost));
         this.baseUrl = options.baseUrl ?? `https://${baseDomain}/api/${apiVer}`;
         this.apiInstance = HttpClient.create({
             baseURL: this.baseUrl,
@@ -228,14 +234,18 @@ export class NeuroInfoApiClient {
         this.apiToken = token;
     }
     /** Generic request wrapper that handles errors consistently. */
-    async request(url, params) {
+    async request(url, params, transform) {
         try {
             const response = await this.apiInstance.request(url, {
                 query: params,
                 headers: this.apiToken != null ? { Authorization: `Bearer ${this.apiToken}` } : undefined,
             });
             // Unwrap { data: T } response envelope
-            const data = response && typeof response === "object" && "data" in response ? response.data : response;
+            const data = transform
+                ? transform(response)
+                : response && typeof response === "object" && "data" in response
+                    ? response.data
+                    : response;
             return { data: data, error: null };
         }
         catch (error) {
@@ -492,7 +502,7 @@ export class NeuroInfoApiEventer {
 }
 /**
  * WebSocket client for the NeuroInfo API with automatic reconnection.
- * Provides real-time event subscriptions for stream, schedule, and subathon updates.
+ * Provides real-time event subscriptions for stream, feed, schedule, and subathon updates.
  *
  * By default uses ticket-based authentication: the client fetches a one-time ticket via
  * REST API before connecting, so the token is never exposed in URL query parameters.
@@ -548,6 +558,8 @@ export class NeuroInfoApiWebsocketClient {
         this.autoReconnect = true;
         /** Whether to automatically send heartbeat pings while connected. Default is true. */
         this.autoHeartbeat = true;
+        /** Optional public Nitter host used to replace URL placeholders in xFeedUpdate data. */
+        this.nitterHost = undefined;
         this._maxReconnectAttempts = 10;
         this._reconnectBaseDelay = 1000;
         this._heartbeatIntervalMs = 30000;
@@ -731,7 +743,8 @@ export class NeuroInfoApiWebsocketClient {
             return;
         listeners.forEach((entry) => {
             try {
-                entry.callback(msg.data.eventData, msg.data.timestamp);
+                const eventData = eventType === "xFeedUpdate" ? replaceXFeedHost(msg.data.eventData, this.nitterHost) : msg.data.eventData;
+                entry.callback(eventData, msg.data.timestamp);
             }
             catch { }
         });
@@ -850,7 +863,7 @@ export class NeuroInfoApiWebsocketClient {
                 if (this.isConnected)
                     this.sendSubscribe(event);
             }
-            return () => this.off(event, callback);
+            return () => this.removeEventListenerEntry(event, entry);
         }
         if (!this.systemListeners.has(event))
             this.systemListeners.set(event, new Set());
@@ -864,20 +877,23 @@ export class NeuroInfoApiWebsocketClient {
                 return;
             for (const entry of listeners) {
                 if (entry.callback === callback) {
-                    listeners.delete(entry);
+                    this.removeEventListenerEntry(event, entry);
                     break;
                 }
-            }
-            if (listeners.size === 0) {
-                this.eventListeners.delete(event);
-                this.subscribedEvents.delete(event);
-                this.pendingSubscriptions.delete(event);
-                if (this.isConnected)
-                    this.sendUnsubscribe(event);
             }
             return;
         }
         this.systemListeners.get(event)?.delete(callback);
+    }
+    removeEventListenerEntry(event, entry) {
+        const listeners = this.eventListeners.get(event);
+        if (!listeners?.delete(entry) || listeners.size > 0)
+            return;
+        this.eventListeners.delete(event);
+        this.subscribedEvents.delete(event);
+        this.pendingSubscriptions.delete(event);
+        if (this.isConnected)
+            this.sendUnsubscribe(event);
     }
     emitSystem(event, ...args) {
         const listeners = this.systemListeners.get(event);
@@ -930,8 +946,31 @@ export var Utils;
     }
     Utils.hasScheduleImage = hasScheduleImage;
 })(Utils || (Utils = {}));
+function replaceXFeedHost(data, nitterHost) {
+    if (nitterHost == null)
+        return data;
+    const replaceHost = (value) => value.split(data.metadata.placeholders.nitterHost).join(nitterHost);
+    return {
+        ...data,
+        entries: data.entries.map((entry) => {
+            const replacedEntry = {
+                ...entry,
+                url: replaceHost(entry.url),
+                media: entry.media.map((media) => ({
+                    ...media,
+                    url: replaceHost(media.url),
+                    ...(media.type === "video" && media.posterUrl ? { posterUrl: replaceHost(media.posterUrl) } : {}),
+                })),
+            };
+            if (replacedEntry.rawContent != null)
+                replacedEntry.rawContent = replaceHost(replacedEntry.rawContent);
+            return replacedEntry;
+        }),
+    };
+}
 const wsEventTypes = new Set([
     "blogFeedUpdate",
+    "xFeedUpdate",
     "scheduleUpdate",
     "subathonUpdate",
     "subathonGoalUpdate",

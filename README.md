@@ -21,6 +21,7 @@ This repository contains documentation for all public API areas:
 - **[Twitch API](twitch.md)** - Stream status and VOD data
 - **[Subathon API](subathon.md)** - Subathon goals and progress
 - **[Blog API](blog.md)** - Neuro-sama blog feed and entry content
+- **[X Feed API](x-feed.md)** - Cached X posts, replies, retweets, and media links
 - **[WebSocket API](websocket.md)** - Real-time events and WebSocket authentication
 - **[Prebuild Clients](clients/README.md)** - ready-to-use clients for your project
 - **[v1 → v2 Migration Guide](migrate.md)** - upgrade paths for REST, WebSocket, and responses
@@ -45,7 +46,7 @@ This repository contains documentation for all public API areas:
 
 - Real-time event stream via WebSocket
 - Secure browser auth via one-time ticket endpoint
-- Event subscriptions for stream, schedule, subathon, and blog updates
+- Event subscriptions for stream, schedule, subathon, blog, and X feed updates
 - Automatic reconnect support in the TypeScript client
 
 ### Subathon Tracking
@@ -62,6 +63,13 @@ This repository contains documentation for all public API areas:
 - Authentication required for JSON endpoint
 - Real-time update event for changed feed entries
 
+### X Feed
+
+- Cached feeds for `NeurosamaAI`, `EvilNeuroAI`, and `Vedal987`
+- Structured tweet, reply, and retweet entries
+- Parsed text or raw HTML content
+- Public Nitter host placeholders for URLs and media
+
 ## 📖 Getting Started
 
 1. **Browse the documentation** - Start with [quickInfo.md](quickInfo.md) for a quick overview
@@ -76,7 +84,7 @@ This repository contains documentation for all public API areas:
 - **WebSocket URL**: `wss://neuro.appstun.net/api/v2/ws`
 - **WebSocket Ticket URL**: `https://neuro.appstun.net/api/v2/ws/ticket`
 - **HTTP Methods**: GET only
-- **Response Format**: JSON — v2 REST success always `{"data": ...}`, v2 REST errors `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}`
+- **Response Format**: JSON — v2 REST success always includes `{"data": ...}` and may include endpoint-specific metadata; v2 REST errors use `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}`
 - **Content-Type**: `application/json`
 - **Authentication**: Bearer token in Authorization header
 
@@ -85,7 +93,7 @@ This repository contains documentation for all public API areas:
 - **Default public/anonymous v2 endpoints**: 30 requests per minute
 - **Authenticated v2 endpoints**: 100 requests per minute per API token
 - **Generous endpoints**: 300 requests per minute where explicitly documented (for example `GET /api/info`)
-- **Endpoint-specific limits**: Some routes have stricter limits, such as schedule search (`6/min` plus `2/10s`) and blog feed (`16/min`)
+- **Endpoint-specific limits**: Some routes have stricter limits, such as schedule search (`6/min` plus `2/10s`), blog feed (`16/min`), and X feed (`16/min`)
 - Rate limits are applied per API token when authenticated, otherwise per client IP
 
 ## 📝 Notes
@@ -94,7 +102,7 @@ This repository contains documentation for all public API areas:
 - Data is cached for optimal performance
 - Manual updates may cause slight delays in data availability
 - The API uses calendar week numbers (ISO 8601 standard)
-- All v2 REST success responses follow `{"data": ...}`; all v2 REST error responses follow `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}`
+- All v2 REST success responses include `{"data": ...}` and may include documented metadata; all v2 REST error responses follow `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}`
 
 <br>
 

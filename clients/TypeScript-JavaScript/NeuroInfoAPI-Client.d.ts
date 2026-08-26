@@ -134,6 +134,12 @@ export declare class NeuroInfoApiClient {
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/blog.md#endpoint
      */
     getBlogFeed: (raw?: boolean) => Promise<ApiResult<BlogFeedData>>;
+    /**
+     * Fetches the cached X feed for one of the supported accounts. Requires an API token.
+     * Pass a public Nitter host as the third argument to replace URL placeholders automatically.
+     * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/x-feed.md#endpoint
+     */
+    getXFeed: (user: XFeedAccount, raw?: boolean, nitterHost?: string) => Promise<ApiResult<XFeedData>>;
 }
 /**
  * Event-based wrapper for the NeuroInfo API.
@@ -205,7 +211,7 @@ export declare class NeuroInfoApiEventer {
 }
 /**
  * WebSocket client for the NeuroInfo API with automatic reconnection.
- * Provides real-time event subscriptions for stream, schedule, and subathon updates.
+ * Provides real-time event subscriptions for stream, feed, schedule, and subathon updates.
  *
  * By default uses ticket-based authentication: the client fetches a one-time ticket via
  * REST API before connecting, so the token is never exposed in URL query parameters.
@@ -231,6 +237,8 @@ export declare class NeuroInfoApiWebsocketClient {
     autoReconnect: boolean;
     /** Whether to automatically send heartbeat pings while connected. Default is true. */
     autoHeartbeat: boolean;
+    /** Optional public Nitter host used to replace URL placeholders in xFeedUpdate data. */
+    nitterHost: string | undefined;
     private _maxReconnectAttempts;
     /** Maximum number of reconnect attempts. Default is 10. Set to 0 for unlimited. */
     get maxReconnectAttempts(): number;
@@ -303,6 +311,7 @@ export declare class NeuroInfoApiWebsocketClient {
      */
     off<T extends WsEventType>(event: T, callback: (data: WsEventDataMap[T], timestamp: number) => void): void;
     off<T extends WsSystemEvent>(event: T, callback: WsSystemEventCallback<T>): void;
+    private removeEventListenerEntry;
     private emitSystem;
     /** Returns a list of currently subscribed event types. */
     getSubscribedEvents(): WsEventType[];
@@ -430,6 +439,53 @@ export interface BlogFeedData {
     subtitle: string;
     entries: BlogFeedEntry[];
 }
+export type XFeedAccount = "NeurosamaAI" | "EvilNeuroAI" | "Vedal987";
+export type XFeedEntryType = "tweet" | "reply" | "retweet";
+export interface XFeedUser {
+    username: string;
+}
+export interface XFeedPost {
+    id: string;
+    content: string;
+    createdTimestamp: number;
+    media: XFeedMedia[];
+}
+export interface XFeedReplyTo extends XFeedUser {
+    post?: XFeedPost;
+}
+export interface XFeedEntry {
+    id: string;
+    type: XFeedEntryType;
+    replyTo?: XFeedReplyTo;
+    retweetedBy?: XFeedUser;
+    author: XFeedUser;
+    url: string;
+    createdTimestamp: number;
+    content?: string;
+    rawContent?: string;
+    media: XFeedMedia[];
+}
+export type XFeedMedia = {
+    type: "image";
+    url: string;
+} | {
+    type: "video";
+    url: string;
+    posterUrl?: string;
+    mimeType?: string;
+};
+export interface XFeedMetadata {
+    placeholders: {
+        nitterHost: string;
+    };
+}
+export interface XFeedData {
+    entries: XFeedEntry[];
+    metadata: XFeedMetadata;
+}
+export interface XFeedUpdateData extends XFeedData {
+    user: XFeedAccount;
+}
 /** Event data for subathonGoalUpdate event. */
 export interface WsSubathonGoalUpdateData {
     year: number;
@@ -440,6 +496,7 @@ export interface WsSubathonGoalUpdateData {
 /** Mapping of event types to their data structures. */
 export interface WsEventDataMap {
     blogFeedUpdate: BlogFeedData;
+    xFeedUpdate: XFeedUpdateData;
     streamOnline: WsStreamOnlineData;
     streamOffline: WsStreamOfflineData;
     streamUpdate: StreamMetadata;

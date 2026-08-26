@@ -4,7 +4,7 @@
 
 ## Response Format
 
-v2 error responses follow a consistent JSON format. Success responses use a consistent `{ "data": ... }` envelope; the payload inside `data` differs by endpoint and is shown in each endpoint's documentation.
+v2 error responses follow a consistent JSON format. Success responses always include `{ "data": ... }`; endpoints may include documented metadata alongside it. The payload inside `data` differs by endpoint and is shown in each endpoint's documentation.
 
 **Success Response (example):**
 
@@ -93,6 +93,7 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 | `RL7` | `RateLimit_Sensitive`       | Rate limit exceeded: Maximum 2 requests per 10 seconds  |
 | `RL8` | `RateLimit_SearchMinute`    | Rate limit exceeded: Maximum 6 requests per minute      |
 | `RL9` | `RateLimit_BlogFeedMinute`  | Rate limit exceeded: Maximum 16 requests per minute     |
+| `RL10` | `RateLimit_NitterFeedMinute` | Rate limit exceeded: Maximum 16 requests per minute    |
 
 ### Subathon Errors (SB)
 
@@ -108,6 +109,12 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 | Code  | Error             | Description        |
 | ----- | ----------------- | ------------------ |
 | `BL1` | `Blog_NoBlogData` | No blog data found |
+
+### X Feed Errors (NF)
+
+| Code  | Error               | Description                          |
+| ----- | ------------------- | ------------------------------------ |
+| `NF1` | `Nitter_NoFeedData` | No feed data found for this user     |
 
 ## Testing Endpoint
 
@@ -185,6 +192,8 @@ The API implements multiple rate limiting tiers:
 - **Burst Protection**: 10 requests per 10 seconds (`RL6`)
 - **Sensitive Endpoint Burst**: 2 requests per 10 seconds (`RL7`)
 - **Search Minute Tier**: 6 requests per minute (`RL8`)
+- **Blog Feed Minute Tier**: 16 requests per minute (`RL9`)
+- **X Feed Minute Tier**: 16 requests per minute (`RL10`)
 - **Strict Tier**: 30 requests per minute (`RL3`)
 - **Standard Tier**: 100 requests per minute (`RL4`)
 - **Generous Tier**: 300 requests per minute (`RL5`)

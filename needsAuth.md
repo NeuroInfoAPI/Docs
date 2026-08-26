@@ -27,6 +27,11 @@
 - **`GET /api/v2/blog`** - Get the cached blog feed
   - Parameters: `raw` (optional)
 
+## X Feed API
+
+- **`GET /api/v2/x-feed`** - Get the cached X feed for a supported account
+  - Parameters: `user` (required query parameter: `NeurosamaAI`, `EvilNeuroAI`, or `Vedal987`), `raw` (optional query parameter)
+
 ## WebSocket API
 
 - **`GET /api/v2/ws/ticket`** - Get one-time WebSocket ticket

@@ -25,6 +25,7 @@ A comprehensive TypeScript client that provides full access to all NeuroInfoAPI 
 - ✅ **Type-Safe Error Handling** - Result pattern with `{ data, error }` return type
 - 📦 **Response Unwrapping** - Automatically unwraps `{ data: ... }` API responses
 - 📰 **Blog Feed Support** - Fetch parsed or raw blog feed data
+- 🐦 **X Feed Support** - Fetch typed posts, replies, retweets, and response metadata
 - ~~📡 **Event System** - `NeuroInfoApiEventer` for "real-time" updates~~ (deprecated)
 - ⚡ **WebSocket Client** - `NeuroInfoApiWebsocketClient` for true real-time updates with auto reconnect
 
@@ -108,6 +109,30 @@ if (rawFeed.data) {
   console.log(rawFeed.data.entries[0]?.rawContent);
 }
 ```
+
+### X Feed
+
+`getXFeed()` requires an API token and accepts one of the three supported account names. Its optional third argument replaces the private Nitter host placeholder in entry URLs, structured `media` URLs, video poster URLs, and `rawContent`. Pass the host without a trailing slash.
+
+```typescript
+client.setApiToken("your-api-token-here");
+
+const publicNitterHost = "https://your-public-nitter.example";
+const feed = await client.getXFeed("NeurosamaAI", false, publicNitterHost);
+const rawFeed = await client.getXFeed("EvilNeuroAI", true, publicNitterHost);
+
+if (feed.data) {
+  console.log(feed.data.entries[0]?.type, feed.data.entries[0]?.url);
+}
+
+if (rawFeed.data) {
+  console.log(rawFeed.data.entries[0]?.rawContent);
+}
+```
+
+Omit the third argument to keep the placeholder unchanged. The response still includes `metadata`, and the supported account names are exported as the `XFeedAccount` type. See the full [X Feed API documentation](../../x-feed.md) for the response schema and placeholder rules.
+
+Replies may additionally contain best-effort FxTwitter parent data under `replyTo.post`. The key is absent when the parent post cannot be resolved.
 
 ### Schedule Status
 
@@ -204,6 +229,7 @@ Use `NeuroInfoApiWebsocketClient` for low-latency, push-based updates:
 import { NeuroInfoApiWebsocketClient } from "./NeuroInfoAPI-Client";
 
 const wsClient = new NeuroInfoApiWebsocketClient("your-api-token-here");
+wsClient.nitterHost = "https://your-public-nitter.example";
 
 wsClient.on("_connected", (sessionId) => {
   console.log("Connected with session:", sessionId);
@@ -221,8 +247,14 @@ wsClient.on("streamOnline", (stream) => {
   console.log("Stream online:", stream.title);
 });
 
+wsClient.on("xFeedUpdate", (feed) => {
+  console.log(feed.user, feed.entries[0]?.url);
+});
+
 await wsClient.connect();
 ```
+
+`nitterHost` is `undefined` by default. Set it to a public Nitter origin to replace URL placeholders in every `xFeedUpdate` received by this client.
 
 **Available WebSocket Events:**
 
@@ -235,6 +267,7 @@ await wsClient.connect();
 | `streamRaidIncoming`       | Incoming raid event                                  |
 | `streamRaidOutgoing`       | Outgoing raid event                                  |
 | `blogFeedUpdate`           | Blog feed changed; includes changed/new entries only |
+| `xFeedUpdate`              | X feed changed; includes account and changed/new entries only |
 | `scheduleUpdate`           | Weekly schedule changed                              |
 | `subathonUpdate`           | Subathon state changed                               |
 | `subathonGoalUpdate`       | Subathon goal changed                                |

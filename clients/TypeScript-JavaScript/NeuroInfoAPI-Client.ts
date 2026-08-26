@@ -216,14 +216,18 @@ export class NeuroInfoApiClient {
   }
 
   /** Generic request wrapper that handles errors consistently. */
-  private async request<T>(url: string, params?: Record<string, any>): Promise<ApiResult<T>> {
+  private async request<T>(url: string, params?: Record<string, any>, transform?: (response: any) => T): Promise<ApiResult<T>> {
     try {
       const response = await this.apiInstance.request<any>(url, {
         query: params,
         headers: this.apiToken != null ? { Authorization: `Bearer ${this.apiToken}` } : undefined,
       });
       // Unwrap { data: T } response envelope
-      const data = response && typeof response === "object" && "data" in response ? response.data : response;
+      const data = transform
+        ? transform(response)
+        : response && typeof response === "object" && "data" in response
+          ? response.data
+          : response;
       return { data: data as T, error: null };
     } catch (error) {
       return { data: null, error: this.parseError(error) };
@@ -316,6 +320,16 @@ export class NeuroInfoApiClient {
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/blog.md#endpoint
    */
   public getBlogFeed = (raw: boolean = false) => this.request<BlogFeedData>("/blog", raw ? { raw: true } : undefined);
+
+  /**
+   * Fetches the cached X feed for one of the supported accounts. Requires an API token.
+   * Pass a public Nitter host as the third argument to replace URL placeholders automatically.
+   * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/x-feed.md#endpoint
+   */
+  public getXFeed = (user: XFeedAccount, raw: boolean = false, nitterHost?: string) =>
+    this.request<XFeedData>("/x-feed", { user, ...(raw ? { raw: true } : {}) }, (response) =>
+      replaceXFeedHost({ entries: response.data, metadata: response.metadata }, nitterHost),
+    );
 }
 
 /**
@@ -580,7 +594,7 @@ export class NeuroInfoApiEventer {
 
 /**
  * WebSocket client for the NeuroInfo API with automatic reconnection.
- * Provides real-time event subscriptions for stream, schedule, and subathon updates.
+ * Provides real-time event subscriptions for stream, feed, schedule, and subathon updates.
  *
  * By default uses ticket-based authentication: the client fetches a one-time ticket via
  * REST API before connecting, so the token is never exposed in URL query parameters.
@@ -611,6 +625,9 @@ export class NeuroInfoApiWebsocketClient {
 
   /** Whether to automatically send heartbeat pings while connected. Default is true. */
   public autoHeartbeat: boolean = true;
+
+  /** Optional public Nitter host used to replace URL placeholders in xFeedUpdate data. */
+  public nitterHost: string | undefined = undefined;
 
   private _maxReconnectAttempts: number = 10;
   /** Maximum number of reconnect attempts. Default is 10. Set to 0 for unlimited. */
@@ -852,7 +869,8 @@ export class NeuroInfoApiWebsocketClient {
 
     listeners.forEach((entry) => {
       try {
-        entry.callback(msg.data.eventData, msg.data.timestamp);
+        const eventData = eventType === "xFeedUpdate" ? replaceXFeedHost(msg.data.eventData as XFeedUpdateData, this.nitterHost) : msg.data.eventData;
+        entry.callback(eventData, msg.data.timestamp);
       } catch {}
     });
   }
@@ -1002,7 +1020,7 @@ export class NeuroInfoApiWebsocketClient {
         if (this.isConnected) this.sendSubscribe(event);
       }
 
-      return () => this.off(event, callback as (data: any, timestamp: number) => void);
+      return () => this.removeEventListenerEntry(event, entry);
     }
 
     if (!this.systemListeners.has(event)) this.systemListeners.set(event, new Set());
@@ -1024,21 +1042,24 @@ export class NeuroInfoApiWebsocketClient {
 
       for (const entry of listeners) {
         if (entry.callback === callback) {
-          listeners.delete(entry);
+          this.removeEventListenerEntry(event, entry);
           break;
         }
-      }
-
-      if (listeners.size === 0) {
-        this.eventListeners.delete(event);
-        this.subscribedEvents.delete(event);
-        this.pendingSubscriptions.delete(event);
-        if (this.isConnected) this.sendUnsubscribe(event);
       }
       return;
     }
 
     this.systemListeners.get(event)?.delete(callback as (...args: any[]) => void);
+  }
+
+  private removeEventListenerEntry(event: WsEventType, entry: WsEventListenerEntry<any>): void {
+    const listeners = this.eventListeners.get(event);
+    if (!listeners?.delete(entry) || listeners.size > 0) return;
+
+    this.eventListeners.delete(event);
+    this.subscribedEvents.delete(event);
+    this.pendingSubscriptions.delete(event);
+    if (this.isConnected) this.sendUnsubscribe(event);
   }
 
   private emitSystem<T extends WsSystemEvent>(event: T, ...args: Parameters<WsSystemEventCallback<T>>): void {
@@ -1223,6 +1244,78 @@ export interface BlogFeedData {
   entries: BlogFeedEntry[];
 }
 
+export type XFeedAccount = "NeurosamaAI" | "EvilNeuroAI" | "Vedal987";
+export type XFeedEntryType = "tweet" | "reply" | "retweet";
+
+export interface XFeedUser {
+  username: string;
+}
+
+export interface XFeedPost {
+  id: string;
+  content: string;
+  createdTimestamp: number;
+  media: XFeedMedia[];
+}
+
+export interface XFeedReplyTo extends XFeedUser {
+  post?: XFeedPost;
+}
+
+export interface XFeedEntry {
+  id: string;
+  type: XFeedEntryType;
+  replyTo?: XFeedReplyTo;
+  retweetedBy?: XFeedUser;
+  author: XFeedUser;
+  url: string;
+  createdTimestamp: number;
+  content?: string;
+  rawContent?: string;
+  media: XFeedMedia[];
+}
+
+export type XFeedMedia =
+  | { type: "image"; url: string }
+  | { type: "video"; url: string; posterUrl?: string; mimeType?: string };
+
+export interface XFeedMetadata {
+  placeholders: {
+    nitterHost: string;
+  };
+}
+
+export interface XFeedData {
+  entries: XFeedEntry[];
+  metadata: XFeedMetadata;
+}
+
+export interface XFeedUpdateData extends XFeedData {
+  user: XFeedAccount;
+}
+
+function replaceXFeedHost<T extends XFeedData>(data: T, nitterHost?: string): T {
+  if (nitterHost == null) return data;
+
+  const replaceHost = (value: string) => value.split(data.metadata.placeholders.nitterHost).join(nitterHost);
+  return {
+    ...data,
+    entries: data.entries.map((entry) => {
+      const replacedEntry = {
+        ...entry,
+        url: replaceHost(entry.url),
+        media: entry.media.map((media) => ({
+          ...media,
+          url: replaceHost(media.url),
+          ...(media.type === "video" && media.posterUrl ? { posterUrl: replaceHost(media.posterUrl) } : {}),
+        })),
+      };
+      if (replacedEntry.rawContent != null) replacedEntry.rawContent = replaceHost(replacedEntry.rawContent);
+      return replacedEntry;
+    }),
+  };
+}
+
 /** Event data for subathonGoalUpdate event. */
 export interface WsSubathonGoalUpdateData {
   year: number;
@@ -1234,6 +1327,7 @@ export interface WsSubathonGoalUpdateData {
 /** Mapping of event types to their data structures. */
 export interface WsEventDataMap {
   blogFeedUpdate: BlogFeedData;
+  xFeedUpdate: XFeedUpdateData;
   streamOnline: WsStreamOnlineData;
   streamOffline: WsStreamOfflineData;
   streamUpdate: StreamMetadata;
@@ -1247,6 +1341,7 @@ export interface WsEventDataMap {
 
 const wsEventTypes: ReadonlySet<WsEventType> = new Set<WsEventType>([
   "blogFeedUpdate",
+  "xFeedUpdate",
   "scheduleUpdate",
   "subathonUpdate",
   "subathonGoalUpdate",
