@@ -323,13 +323,9 @@ export class NeuroInfoApiClient {
 
   /**
    * Fetches the cached X feed for one of the supported accounts. Requires an API token.
-   * Pass a public Nitter host as the third argument to replace URL placeholders automatically.
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/x-feed.md#endpoint
    */
-  public getXFeed = (user: XFeedAccount, raw: boolean = false, nitterHost?: string) =>
-    this.request<XFeedData>("/x-feed", { user, ...(raw ? { raw: true } : {}) }, (response) =>
-      replaceXFeedHost({ entries: response.data, metadata: response.metadata }, nitterHost),
-    );
+  public getXFeed = (user: XFeedAccount) => this.request<XFeedEntry[]>("/x-feed", { user });
 }
 
 /**
@@ -626,9 +622,6 @@ export class NeuroInfoApiWebsocketClient {
   /** Whether to automatically send heartbeat pings while connected. Default is true. */
   public autoHeartbeat: boolean = true;
 
-  /** Optional public Nitter host used to replace URL placeholders in xFeedUpdate data. */
-  public nitterHost: string | undefined = undefined;
-
   private _maxReconnectAttempts: number = 10;
   /** Maximum number of reconnect attempts. Default is 10. Set to 0 for unlimited. */
   public get maxReconnectAttempts(): number {
@@ -869,8 +862,7 @@ export class NeuroInfoApiWebsocketClient {
 
     listeners.forEach((entry) => {
       try {
-        const eventData = eventType === "xFeedUpdate" ? replaceXFeedHost(msg.data.eventData as XFeedUpdateData, this.nitterHost) : msg.data.eventData;
-        entry.callback(eventData, msg.data.timestamp);
+        entry.callback(msg.data.eventData, msg.data.timestamp);
       } catch {}
     });
   }
@@ -1251,15 +1243,9 @@ export interface XFeedUser {
   username: string;
 }
 
-export interface XFeedPost {
-  id: string;
-  content: string;
-  createdTimestamp: number;
-  media: XFeedMedia[];
-}
-
 export interface XFeedReplyTo extends XFeedUser {
-  post?: XFeedPost;
+  statusId: string;
+  url: string;
 }
 
 export interface XFeedEntry {
@@ -1270,8 +1256,7 @@ export interface XFeedEntry {
   author: XFeedUser;
   url: string;
   createdTimestamp: number;
-  content?: string;
-  rawContent?: string;
+  content: string;
   media: XFeedMedia[];
 }
 
@@ -1279,41 +1264,9 @@ export type XFeedMedia =
   | { type: "image"; url: string }
   | { type: "video"; url: string; posterUrl?: string; mimeType?: string };
 
-export interface XFeedMetadata {
-  placeholders: {
-    nitterHost: string;
-  };
-}
-
-export interface XFeedData {
-  entries: XFeedEntry[];
-  metadata: XFeedMetadata;
-}
-
-export interface XFeedUpdateData extends XFeedData {
+export interface XFeedUpdateData {
   user: XFeedAccount;
-}
-
-function replaceXFeedHost<T extends XFeedData>(data: T, nitterHost?: string): T {
-  if (nitterHost == null) return data;
-
-  const replaceHost = (value: string) => value.split(data.metadata.placeholders.nitterHost).join(nitterHost);
-  return {
-    ...data,
-    entries: data.entries.map((entry) => {
-      const replacedEntry = {
-        ...entry,
-        url: replaceHost(entry.url),
-        media: entry.media.map((media) => ({
-          ...media,
-          url: replaceHost(media.url),
-          ...(media.type === "video" && media.posterUrl ? { posterUrl: replaceHost(media.posterUrl) } : {}),
-        })),
-      };
-      if (replacedEntry.rawContent != null) replacedEntry.rawContent = replaceHost(replacedEntry.rawContent);
-      return replacedEntry;
-    }),
-  };
+  entries: XFeedEntry[];
 }
 
 /** Event data for subathonGoalUpdate event. */

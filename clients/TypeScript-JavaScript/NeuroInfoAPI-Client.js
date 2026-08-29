@@ -198,10 +198,9 @@ export class NeuroInfoApiClient {
         this.getBlogFeed = (raw = false) => this.request("/blog", raw ? { raw: true } : undefined);
         /**
          * Fetches the cached X feed for one of the supported accounts. Requires an API token.
-         * Pass a public Nitter host as the third argument to replace URL placeholders automatically.
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/x-feed.md#endpoint
          */
-        this.getXFeed = (user, raw = false, nitterHost) => this.request("/x-feed", { user, ...(raw ? { raw: true } : {}) }, (response) => replaceXFeedHost({ entries: response.data, metadata: response.metadata }, nitterHost));
+        this.getXFeed = (user) => this.request("/x-feed", { user });
         this.baseUrl = options.baseUrl ?? `https://${baseDomain}/api/${apiVer}`;
         this.apiInstance = HttpClient.create({
             baseURL: this.baseUrl,
@@ -558,8 +557,6 @@ export class NeuroInfoApiWebsocketClient {
         this.autoReconnect = true;
         /** Whether to automatically send heartbeat pings while connected. Default is true. */
         this.autoHeartbeat = true;
-        /** Optional public Nitter host used to replace URL placeholders in xFeedUpdate data. */
-        this.nitterHost = undefined;
         this._maxReconnectAttempts = 10;
         this._reconnectBaseDelay = 1000;
         this._heartbeatIntervalMs = 30000;
@@ -743,8 +740,7 @@ export class NeuroInfoApiWebsocketClient {
             return;
         listeners.forEach((entry) => {
             try {
-                const eventData = eventType === "xFeedUpdate" ? replaceXFeedHost(msg.data.eventData, this.nitterHost) : msg.data.eventData;
-                entry.callback(eventData, msg.data.timestamp);
+                entry.callback(msg.data.eventData, msg.data.timestamp);
             }
             catch { }
         });
@@ -946,28 +942,6 @@ export var Utils;
     }
     Utils.hasScheduleImage = hasScheduleImage;
 })(Utils || (Utils = {}));
-function replaceXFeedHost(data, nitterHost) {
-    if (nitterHost == null)
-        return data;
-    const replaceHost = (value) => value.split(data.metadata.placeholders.nitterHost).join(nitterHost);
-    return {
-        ...data,
-        entries: data.entries.map((entry) => {
-            const replacedEntry = {
-                ...entry,
-                url: replaceHost(entry.url),
-                media: entry.media.map((media) => ({
-                    ...media,
-                    url: replaceHost(media.url),
-                    ...(media.type === "video" && media.posterUrl ? { posterUrl: replaceHost(media.posterUrl) } : {}),
-                })),
-            };
-            if (replacedEntry.rawContent != null)
-                replacedEntry.rawContent = replaceHost(replacedEntry.rawContent);
-            return replacedEntry;
-        }),
-    };
-}
 const wsEventTypes = new Set([
     "blogFeedUpdate",
     "xFeedUpdate",

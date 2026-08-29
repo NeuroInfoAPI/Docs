@@ -136,10 +136,9 @@ export declare class NeuroInfoApiClient {
     getBlogFeed: (raw?: boolean) => Promise<ApiResult<BlogFeedData>>;
     /**
      * Fetches the cached X feed for one of the supported accounts. Requires an API token.
-     * Pass a public Nitter host as the third argument to replace URL placeholders automatically.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/x-feed.md#endpoint
      */
-    getXFeed: (user: XFeedAccount, raw?: boolean, nitterHost?: string) => Promise<ApiResult<XFeedData>>;
+    getXFeed: (user: XFeedAccount) => Promise<ApiResult<XFeedEntry[]>>;
 }
 /**
  * Event-based wrapper for the NeuroInfo API.
@@ -237,8 +236,6 @@ export declare class NeuroInfoApiWebsocketClient {
     autoReconnect: boolean;
     /** Whether to automatically send heartbeat pings while connected. Default is true. */
     autoHeartbeat: boolean;
-    /** Optional public Nitter host used to replace URL placeholders in xFeedUpdate data. */
-    nitterHost: string | undefined;
     private _maxReconnectAttempts;
     /** Maximum number of reconnect attempts. Default is 10. Set to 0 for unlimited. */
     get maxReconnectAttempts(): number;
@@ -444,14 +441,9 @@ export type XFeedEntryType = "tweet" | "reply" | "retweet";
 export interface XFeedUser {
     username: string;
 }
-export interface XFeedPost {
-    id: string;
-    content: string;
-    createdTimestamp: number;
-    media: XFeedMedia[];
-}
 export interface XFeedReplyTo extends XFeedUser {
-    post?: XFeedPost;
+    statusId: string;
+    url: string;
 }
 export interface XFeedEntry {
     id: string;
@@ -461,8 +453,7 @@ export interface XFeedEntry {
     author: XFeedUser;
     url: string;
     createdTimestamp: number;
-    content?: string;
-    rawContent?: string;
+    content: string;
     media: XFeedMedia[];
 }
 export type XFeedMedia = {
@@ -474,17 +465,9 @@ export type XFeedMedia = {
     posterUrl?: string;
     mimeType?: string;
 };
-export interface XFeedMetadata {
-    placeholders: {
-        nitterHost: string;
-    };
-}
-export interface XFeedData {
-    entries: XFeedEntry[];
-    metadata: XFeedMetadata;
-}
-export interface XFeedUpdateData extends XFeedData {
+export interface XFeedUpdateData {
     user: XFeedAccount;
+    entries: XFeedEntry[];
 }
 /** Event data for subathonGoalUpdate event. */
 export interface WsSubathonGoalUpdateData {

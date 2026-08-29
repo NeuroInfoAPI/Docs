@@ -93,7 +93,7 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 | `RL7` | `RateLimit_Sensitive`       | Rate limit exceeded: Maximum 2 requests per 10 seconds  |
 | `RL8` | `RateLimit_SearchMinute`    | Rate limit exceeded: Maximum 6 requests per minute      |
 | `RL9` | `RateLimit_BlogFeedMinute`  | Rate limit exceeded: Maximum 16 requests per minute     |
-| `RL10` | `RateLimit_NitterFeedMinute` | Rate limit exceeded: Maximum 16 requests per minute    |
+| `RL10` | `RateLimit_XFeedMinute` | Rate limit exceeded: Maximum 16 requests per minute         |
 
 ### Subathon Errors (SB)
 
@@ -114,7 +114,7 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 
 | Code  | Error               | Description                          |
 | ----- | ------------------- | ------------------------------------ |
-| `NF1` | `Nitter_NoFeedData` | No feed data found for this user     |
+| `XF1` | `XFeed_NoFeedData` | No feed data found for this user     |
 
 ## Testing Endpoint
 

@@ -134,12 +134,11 @@ _Full docs of endpoint: [x-feed.md](x-feed.md)_
 `GET /x-feed`
 
 - **Purpose**: Cached X posts, replies, and retweets for a supported account
-- **Parameters**: `user` (required query parameter: `NeurosamaAI`, `EvilNeuroAI`, or `Vedal987`), `raw` (optional query parameter)
+- **Parameters**: `user` (required query parameter: `NeurosamaAI`, `EvilNeuroAI`, or `Vedal987`)
 - **Public**: No (Auth required)
 - **Rate limit**: `16/min` per API token
 - **Cache**: `120` seconds
-- **Example**: `/x-feed?user=NeurosamaAI&raw`
-- **Note**: URLs use the Nitter host placeholder documented in the response metadata
+- **Example**: `/x-feed?user=NeurosamaAI`
 
 ## Devstream API
 

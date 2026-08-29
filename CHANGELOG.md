@@ -3,6 +3,14 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [29.08.2026]
+
+### Changed (breaking)
+
+- Replaced the X Feed's Nitter-backed source with FxTwitter profile status lists. The endpoint now returns `{ data: XFeedEntry[] }` without source metadata, raw entries, placeholders, or reply-parent enrichment ([x-feed.md](x-feed.md)).
+- Simplified `getXFeed(user)` and `xFeedUpdate` to use direct X URLs and the reduced entry shape ([NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts), [websocket.md](websocket.md)).
+- Renamed X Feed errors to `RateLimit_XFeedMinute` (`RL10`) and `XFeed_NoFeedData` (`XF1`) ([errors.md](errors.md)).
+
 ## [26.08.2026]
 
 ### Added

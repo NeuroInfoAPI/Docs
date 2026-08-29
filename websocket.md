@@ -215,9 +215,6 @@ This message protocol is used by `WSS /api/v2/ws`.
 
 ##### X Feed Update Event
 
-> [!WARNING]
-> Due to [legal troubles of Nitter](https://github.com/zedeus/nitter/issues/1442#issuecomment-5413651441), this endpoint may stop working at any time. It is not guaranteed to be maintained or supported. Use at your own risk.
-
 Only entries that are new or changed since the previous refresh are included.
 
 ```json
@@ -233,38 +230,22 @@ Only entries that are new or changed since the previous refresh are included.
           "type": "reply",
           "replyTo": {
             "username": "EvilNeuroAI",
-            "post": {
-              "id": "2089660000000000000",
-              "content": "Example parent post",
-              "createdTimestamp": 1787049000000,
-              "media": []
-            }
+            "statusId": "2089660000000000000",
+            "url": "https://x.com/EvilNeuroAI/status/2089660000000000000"
           },
           "author": {
             "username": "NeurosamaAI"
           },
-          "url": "<some-public-nitter-instance-host>/NeurosamaAI/status/2089666074224546277#m",
+          "url": "https://x.com/NeurosamaAI/status/2089666074224546277",
           "createdTimestamp": 1787050190000,
           "content": "Example reply",
           "media": []
         }
-      ],
-      "metadata": {
-        "placeholders": {
-          "nitterHost": "<some-public-nitter-instance-host>"
-        }
-      }
+      ]
     },
     "timestamp": 1787050195000
   }
 }
-```
-
-The TypeScript/JavaScript client exposes an optional `nitterHost` property. Set it once on the WebSocket client to replace Nitter URL placeholders in every `xFeedUpdate`:
-
-```typescript
-const wsClient = new NeuroInfoApiWebsocketClient("your-api-token-here");
-wsClient.nitterHost = "https://your-public-nitter.example";
 ```
 
 ##### Subscription Responses
@@ -416,6 +397,5 @@ Possible `reason` values:
 - `streamUpdate` events are throttled to at most one broadcast every 2 seconds
 - `blogFeedUpdate` broadcasts only changed or newly added entries
 - `xFeedUpdate` broadcasts only changed or newly added entries for each supported X account
-- A new reply can be broadcast again when best-effort `replyTo.post` enrichment completes
 - Keepalive pings are enabled; idle timeout is 60 seconds
 - For lightweight client-side liveness checks, prefer `ping`/`pong` over `listEvents`
