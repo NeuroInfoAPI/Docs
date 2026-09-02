@@ -213,15 +213,15 @@ This message protocol is used by `WSS /api/v2/ws`.
 }
 ```
 
-##### X Feed Update Event
+##### X Feed New Entries Event
 
-Only entries that are new or changed since the previous refresh are included.
+Only entries published after the newest previously seen entry are included. Changes to existing entries and old entries that re-enter the rolling feed cache do not trigger this event.
 
 ```json
 {
   "type": "event",
   "data": {
-    "eventType": "xFeedUpdate",
+    "eventType": "xFeedNewEntries",
     "eventData": {
       "user": "NeurosamaAI",
       "entries": [
@@ -231,7 +231,13 @@ Only entries that are new or changed since the previous refresh are included.
           "replyTo": {
             "username": "EvilNeuroAI",
             "statusId": "2089660000000000000",
-            "url": "https://x.com/EvilNeuroAI/status/2089660000000000000"
+            "url": "https://x.com/EvilNeuroAI/status/2089660000000000000",
+            "post": {
+              "id": "2089660000000000000",
+              "content": "Example parent post",
+              "createdTimestamp": 1787040000000,
+              "media": []
+            }
           },
           "author": {
             "username": "NeurosamaAI"
@@ -247,6 +253,8 @@ Only entries that are new or changed since the previous refresh are included.
   }
 }
 ```
+
+`xFeedUpdate` is deprecated. It is currently emitted at the same time with the same payload so existing consumers keep working. New consumers should only subscribe to `xFeedNewEntries`; subscribing to both produces duplicate notifications.
 
 ##### Subscription Responses
 
@@ -277,6 +285,7 @@ Only entries that are new or changed since the previous refresh are included.
     "subscribedEvents": ["streamOnline"],
     "availableEvents": [
       "blogFeedUpdate",
+      "xFeedNewEntries",
       "xFeedUpdate",
       "scheduleUpdate",
       "subathonUpdate",
@@ -304,7 +313,8 @@ Only entries that are new or changed since the previous refresh are included.
 | Event Type                 | Description                                                            |
 | -------------------------- | ---------------------------------------------------------------------- |
 | `blogFeedUpdate`           | Blog feed changed; payload contains only changed/new entries           |
-| `xFeedUpdate`              | X feed changed; payload identifies the account and changed/new entries |
+| `xFeedNewEntries`          | Newly published X posts, replies, and retweets                         |
+| `xFeedUpdate`              | Deprecated alias emitted together with `xFeedNewEntries`               |
 | `scheduleUpdate`           | Weekly schedule was updated                                            |
 | `subathonUpdate`           | Subathon state changed                                                 |
 | `subathonGoalUpdate`       | Subathon goal status changed                                           |
@@ -396,6 +406,7 @@ Possible `reason` values:
 - Maximum 5 active WebSocket connections per user (unlimited tokens excluded)
 - `streamUpdate` events are throttled to at most one broadcast every 2 seconds
 - `blogFeedUpdate` broadcasts only changed or newly added entries
-- `xFeedUpdate` broadcasts only changed or newly added entries for each supported X account
+- `xFeedNewEntries` broadcasts only entries newer than the newest previously seen entry for each supported X account
+- `xFeedUpdate` is a deprecated compatibility alias emitted with the same payload
 - Keepalive pings are enabled; idle timeout is 60 seconds
 - For lightweight client-side liveness checks, prefer `ping`/`pong` over `listEvents`

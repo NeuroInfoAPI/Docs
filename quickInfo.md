@@ -179,7 +179,7 @@ _Full docs of endpoint: [websocket.md](websocket.md)_
 
 - **Purpose**: Receive real-time stream/schedule/subathon events
 - **Authentication**: Required (ticket query param or Authorization header)
-- **Event Types**: `blogFeedUpdate`, `xFeedUpdate`, `scheduleUpdate`, `subathonUpdate`, `subathonGoalUpdate`, `streamOnline`, `streamUpdate`, `streamOffline`, `secretneuroaccountOnline`, `streamRaidIncoming`, `streamRaidOutgoing`
+- **Event Types**: `blogFeedUpdate`, `xFeedNewEntries`, `xFeedUpdate` (deprecated), `scheduleUpdate`, `subathonUpdate`, `subathonGoalUpdate`, `streamOnline`, `streamUpdate`, `streamOffline`, `secretneuroaccountOnline`, `streamRaidIncoming`, `streamRaidOutgoing`
 - **Heartbeat Tip**: For custom clients, use lightweight `ping`/`pong` for liveness checks
 - **Example**: `/api/v2/ws?ticket=YOUR_ONE_TIME_TICKET`
 

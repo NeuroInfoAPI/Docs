@@ -944,6 +944,7 @@ export var Utils;
 })(Utils || (Utils = {}));
 const wsEventTypes = new Set([
     "blogFeedUpdate",
+    "xFeedNewEntries",
     "xFeedUpdate",
     "scheduleUpdate",
     "subathonUpdate",

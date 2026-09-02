@@ -3,6 +3,17 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [02.09.2026]
+
+### Added
+
+- Added `xFeedNewEntries`, which is only emitted for newly published X posts, replies, and retweets. `xFeedUpdate` remains as a deprecated compatibility event with the same payload ([websocket.md](websocket.md), [x-feed.md](x-feed.md)).
+
+### Fixed
+
+- Prevented old X feed entries from being broadcast again when they leave and later re-enter the rolling feed cache.
+- Moved available reply target posts under `replyTo.post` instead of returning them as unrelated account-feed entries. Tweets and replies must be authored by the requested account; retweets must identify it under `retweetedBy`.
+
 ## [29.08.2026]
 
 ### Changed (breaking)

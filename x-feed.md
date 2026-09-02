@@ -10,6 +10,8 @@
 
 Returns the latest cached X posts, replies, and retweets for one supported account.
 
+Tweet and reply authors always match the requested account. Retweets keep the original author under `author` and identify the requested account under `retweetedBy`.
+
 ## Authentication
 
 **Required** - Use header: `Authorization: Bearer YOUR_API_TOKEN`
@@ -38,7 +40,13 @@ Authorization: Bearer YOUR_API_TOKEN
       "replyTo": {
         "username": "nyalra",
         "statusId": "2080484493006434440",
-        "url": "https://x.com/nyalra/status/2080484493006434440"
+        "url": "https://x.com/nyalra/status/2080484493006434440",
+        "post": {
+          "id": "2080484493006434440",
+          "content": "Help me neuro-sama",
+          "createdTimestamp": 1784861131000,
+          "media": []
+        }
       },
       "author": {
         "username": "NeurosamaAI"
@@ -58,7 +66,7 @@ Authorization: Bearer YOUR_API_TOKEN
 | ------------------ | ------------------------------ | -------------------------------------------------------------- |
 | `id`               | string                         | Exact X post ID, kept as a string to avoid integer loss.       |
 | `type`             | `tweet`, `reply`, or `retweet` | Entry type.                                                    |
-| `replyTo`          | object                         | Reply target with `username`, `statusId`, and `url`.           |
+| `replyTo`          | object                         | Reply target with `username`, `statusId`, `url`, and optional `post`. |
 | `retweetedBy`      | object                         | Account that reposted the entry; only included for retweets.   |
 | `author`           | object                         | Original entry author with `username`.                         |
 | `url`              | string                         | Direct X post URL.                                             |
@@ -87,6 +95,19 @@ Video attachment:
 ```
 
 `posterUrl` and `mimeType` are included when provided by the source.
+
+## Reply Post
+
+When the parent status is included in the FxTwitter response, replies also contain it under `replyTo.post`:
+
+| Property           | Type     | Description                                      |
+| ------------------ | -------- | ------------------------------------------------ |
+| `id`               | string   | Exact ID of the parent X post.                   |
+| `content`          | string   | Plain-text parent post content.                  |
+| `createdTimestamp` | number   | Parent post creation time in Unix milliseconds. |
+| `media`            | object[] | Parent post image and video attachments.         |
+
+`replyTo.post` is optional because deleted, private, or otherwise unavailable parent posts may not be returned by the source.
 
 ## Error Responses
 
@@ -123,4 +144,5 @@ Video attachment:
 - HTTP responses use `Cache-Control: private, max-age=120`.
 - The endpoint requires authentication and is rate-limited to `16/min` per API token.
 - Missing or unsupported `user` values return the general `AP4` invalid-query error.
-- `xFeedUpdate` contains the account name and only changed or newly added entries; see [websocket.md](websocket.md#x-feed-update-event).
+- `xFeedNewEntries` contains the account name and only newly published entries; see [websocket.md](websocket.md#x-feed-new-entries-event).
+- The deprecated `xFeedUpdate` event is emitted with the same payload for backwards compatibility.

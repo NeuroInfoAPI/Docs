@@ -124,7 +124,7 @@ if (feed.data) {
 }
 ```
 
-The supported account names are exported as the `XFeedAccount` type. Replies contain their target under `replyTo` with `username`, `statusId`, and `url`.
+The supported account names are exported as the `XFeedAccount` type. Replies contain their target under `replyTo` with `username`, `statusId`, `url`, and optional parent status data under `post`.
 
 ### Schedule Status
 
@@ -238,7 +238,7 @@ wsClient.on("streamOnline", (stream) => {
   console.log("Stream online:", stream.title);
 });
 
-wsClient.on("xFeedUpdate", (feed) => {
+wsClient.on("xFeedNewEntries", (feed) => {
   console.log(feed.user, feed.entries[0]?.url);
 });
 
@@ -256,7 +256,8 @@ await wsClient.connect();
 | `streamRaidIncoming`       | Incoming raid event                                  |
 | `streamRaidOutgoing`       | Outgoing raid event                                  |
 | `blogFeedUpdate`           | Blog feed changed; includes changed/new entries only |
-| `xFeedUpdate`              | X feed changed; includes account and changed/new entries only |
+| `xFeedNewEntries`          | New X entries; includes account and newly published entries only |
+| `xFeedUpdate`              | Deprecated alias emitted together with `xFeedNewEntries`      |
 | `scheduleUpdate`           | Weekly schedule changed                              |
 | `subathonUpdate`           | Subathon state changed                               |
 | `subathonGoalUpdate`       | Subathon goal changed                                |

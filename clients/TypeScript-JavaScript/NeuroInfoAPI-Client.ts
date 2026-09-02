@@ -1246,6 +1246,14 @@ export interface XFeedUser {
 export interface XFeedReplyTo extends XFeedUser {
   statusId: string;
   url: string;
+  post?: XFeedPost;
+}
+
+export interface XFeedPost {
+  id: string;
+  content: string;
+  createdTimestamp: number;
+  media: XFeedMedia[];
 }
 
 export interface XFeedEntry {
@@ -1264,10 +1272,13 @@ export type XFeedMedia =
   | { type: "image"; url: string }
   | { type: "video"; url: string; posterUrl?: string; mimeType?: string };
 
-export interface XFeedUpdateData {
+export interface XFeedNewEntriesData {
   user: XFeedAccount;
   entries: XFeedEntry[];
 }
+
+/** @deprecated Use XFeedNewEntriesData and xFeedNewEntries instead. */
+export type XFeedUpdateData = XFeedNewEntriesData;
 
 /** Event data for subathonGoalUpdate event. */
 export interface WsSubathonGoalUpdateData {
@@ -1280,6 +1291,8 @@ export interface WsSubathonGoalUpdateData {
 /** Mapping of event types to their data structures. */
 export interface WsEventDataMap {
   blogFeedUpdate: BlogFeedData;
+  xFeedNewEntries: XFeedNewEntriesData;
+  /** @deprecated Subscribe to xFeedNewEntries instead. */
   xFeedUpdate: XFeedUpdateData;
   streamOnline: WsStreamOnlineData;
   streamOffline: WsStreamOfflineData;
@@ -1294,6 +1307,7 @@ export interface WsEventDataMap {
 
 const wsEventTypes: ReadonlySet<WsEventType> = new Set<WsEventType>([
   "blogFeedUpdate",
+  "xFeedNewEntries",
   "xFeedUpdate",
   "scheduleUpdate",
   "subathonUpdate",
