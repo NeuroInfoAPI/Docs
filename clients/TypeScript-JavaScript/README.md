@@ -2,7 +2,7 @@
 
 # TypeScript/JavaScript Client
 
-A comprehensive TypeScript client that provides full access to all NeuroInfoAPI endpoints with proper type definitions.
+A TypeScript client with proper type definitions for its supported NeuroInfoAPI endpoints.
 
 > [!NOTE]
 > The client defaults to `https://neuro.appstun.net/api/v2` and unwraps API responses automatically.  
@@ -87,7 +87,12 @@ if (error) {
   return;
 }
 
-// TypeScript knows data is TwitchStreamData here
+// TypeScript knows data is TwitchStreamState here
+if (!data.isLive) {
+  console.log("The stream is offline");
+  return;
+}
+
 console.log(data.title);
 ```
 
@@ -151,7 +156,7 @@ Use `getScheduleSearch` to search schedule entries and continue with `nextCursor
 Optional filter: `type` (`normal`, `offline`, `canceled`, `TBD`, `unknown`).
 
 > [!IMPORTANT]
-> `/schedule/search` uses two limits: `6 requests/minute` and `2 requests/10 seconds` per token.
+> `/schedule/search` uses two limits: `6 requests/minute` and `2 requests/10 seconds` per authenticated Twitch account.
 > Pagination can continue immediately, but avoid tight loops.
 
 ```typescript
@@ -266,6 +271,9 @@ await wsClient.connect();
 
 > [!NOTE]
 > By default, the WebSocket client uses ticket-based authentication (`GET /api/v2/ws/ticket`) before connecting. This avoids putting API tokens into URL query parameters.
+> Concurrent `connect()` calls are safe and share the same connection attempt. Calling `setToken()` or `setApiToken()` while connecting or connected cleanly replaces the active attempt. `disconnect()` immediately cancels pending ticket or handshake work. Connection setup times out after 15 seconds by default and can be configured with `connectTimeoutMs` (minimum 1000).
+> `isConnected` becomes true after the welcome message was received. Event subscriptions registered during connection setup are sent once the session is ready.
+> `apiBaseUrl` should not include a protocol; `useTls` selects HTTPS/WSS or HTTP/WS for both clients. HTTP(S)/WS(S) protocols are accepted temporarily for compatibility, but this support is deprecated and will be removed in a future major version. A full `websocketUrl` override preserves its existing query parameters when the ticket is added.
 
 ---
 

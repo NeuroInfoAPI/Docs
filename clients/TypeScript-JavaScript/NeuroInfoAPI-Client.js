@@ -1,8 +1,43 @@
-const baseDomain = "neuro.appstun.net";
-const apiVer = "v2";
+const apiVersion = "v2";
+const defaultApiBaseUrl = `neuro.appstun.net/api/${apiVersion}`;
+function invokeSafely(callback, ...args) {
+    try {
+        const result = callback(...args);
+        if (result && typeof result.then === "function")
+            void Promise.resolve(result).catch(() => { });
+    }
+    catch { }
+}
+function clearTimeoutHandle(handle) {
+    if (handle != null)
+        clearTimeout(handle);
+    return null;
+}
+function clearIntervalHandle(handle) {
+    if (handle != null)
+        clearInterval(handle);
+    return null;
+}
+function createClientUrls(apiBaseUrl = defaultApiBaseUrl, useTls) {
+    const protocol = apiBaseUrl.match(/^(https?|wss?):\/\//i)?.[1]?.toLowerCase();
+    if (protocol)
+        console.warn("[NeuroInfoAPI] Protocols in apiBaseUrl are deprecated and will stop being supported in a future major version. Remove the protocol and use useTls instead.");
+    const base = apiBaseUrl.replace(/^(?:https?|wss?):\/\//i, "").replace(/^\/+|\/+$/g, "");
+    if (!base || /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(base) || /[?#]/.test(base))
+        throw new TypeError("apiBaseUrl must contain a host and API path without query or hash");
+    const tls = useTls ?? (protocol ? protocol.endsWith("s") : true);
+    return { api: `${tls ? "https" : "http"}://${base}`, websocket: `${tls ? "wss" : "ws"}://${base}/ws` };
+}
+function deriveApiUrl(websocketUrl) {
+    const url = new URL(websocketUrl);
+    url.protocol = url.protocol === "ws:" ? "http:" : "https:";
+    url.pathname = url.pathname.replace(/\/ws(?:\/.*)?$/, "");
+    url.search = url.hash = "";
+    return url.toString().replace(/\/+$/, "");
+}
 // Boot check: fires once and warns when this client no longer targets the current public API version.
 let bootCheckFired = false;
-async function bootCheck(baseUrlOrApiBase, clientApiVer = apiVer) {
+async function bootCheck(baseUrlOrApiBase, clientApiVer = apiVersion) {
     if (bootCheckFired)
         return;
     bootCheckFired = true;
@@ -19,13 +54,15 @@ async function bootCheck(baseUrlOrApiBase, clientApiVer = apiVer) {
         if (latestVersion && latestVersion !== clientApiVer) {
             switch (currentStatus) {
                 case "deprecated":
-                    const sunsetDate = currentVersionInfo?.sunset ? new Date(currentVersionInfo.sunset) : null;
-                    console.warn(`\x1b[33m[NeuroInfoAPI] API ${clientApiVer} is deprecated and will be turned off${sunsetDate ? ` on ${sunsetDate.toISOString()}` : ""}.`);
+                    const parsedSunsetDate = currentVersionInfo?.sunset ? new Date(currentVersionInfo.sunset) : null;
+                    const sunsetDate = parsedSunsetDate && Number.isFinite(parsedSunsetDate.getTime()) ? parsedSunsetDate : null;
+                    console.warn(`\x1b[33m[NeuroInfoAPI] API ${clientApiVer} is deprecated and will be turned off${sunsetDate ? ` on ${sunsetDate.toISOString()}` : ""}.\x1b[0m`);
                     break;
                 case "removed":
-                    throw new Error(`API ${clientApiVer} is no longer available. Please update to the latest version. See ${latestVersionInfo?.docsUrl ? `See ${latestVersionInfo.docsUrl}` : ""}`);
+                    console.warn(`\x1b[31m[NeuroInfoAPI] API ${clientApiVer} is no longer available. Please update to the latest version.${latestVersionInfo?.docsUrl ? ` See ${latestVersionInfo.docsUrl}` : ""}\x1b[0m`);
+                    break;
                 default:
-                    console.warn(`\x1b[33m[NeuroInfoAPI] API ${clientApiVer} is not the latest version. The latest version is ${latestVersion}.`);
+                    console.warn(`\x1b[33m[NeuroInfoAPI] API ${clientApiVer} is not the latest version. The latest version is ${latestVersion}.\x1b[0m`);
                     break;
             }
         }
@@ -47,28 +84,30 @@ export class HttpRequestError extends Error {
  */
 export class HttpClient {
     constructor(options = {}) {
-        this.baseURL = options.baseURL ?? "";
-        this.timeout = options.timeout ?? 10000;
-        this.defaultHeaders = options.headers ?? {};
+        const timeout = options.timeout == null || !Number.isFinite(options.timeout) || options.timeout < 0 ? 10000 : options.timeout;
+        this.config = { baseURL: options.baseURL ?? "", timeout, headers: options.headers ?? {} };
     }
-    static create(options) {
+    /** @deprecated Use `new HttpClient(options)` instead. */
+    static create(options = {}) {
         return new HttpClient(options);
     }
     async request(url, options = {}) {
         const fullUrl = this.buildUrl(url, options.query);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        const controller = options.signal ? null : new AbortController();
+        const signal = options.signal ?? controller.signal;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), this.config.timeout) : null;
+        const method = options.method ?? "GET";
         try {
-            const response = await fetch(fullUrl, {
-                method: options.method ?? "GET",
-                headers: { ...this.defaultHeaders, ...options.headers },
-                signal: controller.signal,
-            });
+            const response = await fetch(fullUrl, { method, headers: { ...this.config.headers, ...options.headers }, signal });
             let data;
             try {
                 data = await response.json();
             }
-            catch {
+            catch (error) {
+                if (signal.aborted || (error instanceof Error && error.name === "AbortError"))
+                    throw new HttpRequestError(options.signal ? "Request aborted" : "Request timeout");
+                if (response.ok && method.toUpperCase() !== "HEAD" && response.status !== 204 && response.status !== 205)
+                    throw new HttpRequestError("Invalid JSON response", response.status);
                 data = undefined;
             }
             if (!response.ok)
@@ -79,23 +118,40 @@ export class HttpClient {
             if (error instanceof HttpRequestError)
                 throw error;
             if (error instanceof Error && error.name === "AbortError")
-                throw new HttpRequestError("Request timeout");
+                throw new HttpRequestError(options.signal ? "Request aborted" : "Request timeout");
             throw new HttpRequestError(error instanceof Error ? error.message : "Network error");
         }
         finally {
-            clearTimeout(timeoutId);
+            clearTimeoutHandle(timeoutId);
         }
     }
     buildUrl(path, query) {
-        const base = this.baseURL.replace(/\/$/, "");
-        const relativePath = path.startsWith("/") ? path : `/${path}`;
-        const url = new URL(`${base}${relativePath}`);
-        if (query) {
-            for (const [key, value] of Object.entries(query)) {
-                if (value !== undefined && value !== null)
-                    url.searchParams.set(key, String(value));
+        const isAbsoluteUrl = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(path);
+        let url;
+        try {
+            if (isAbsoluteUrl)
+                url = new URL(path);
+            else {
+                const base = this.config.baseURL.replace(/\/+$/, "");
+                if (base) {
+                    const relativePath = path.startsWith("/") ? path : `/${path}`;
+                    url = new URL(`${base}${relativePath}`);
+                }
+                else if (typeof location !== "undefined")
+                    url = new URL(path, location.origin);
+                else
+                    throw new HttpRequestError("A baseURL is required for relative request URLs");
             }
         }
+        catch (error) {
+            if (error instanceof HttpRequestError)
+                throw error;
+            throw new HttpRequestError(`Invalid request URL: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        if (query)
+            for (const [key, value] of Object.entries(query))
+                if (value !== undefined && value !== null)
+                    url.searchParams.set(key, String(value));
         return url.toString();
     }
 }
@@ -163,13 +219,7 @@ export class NeuroInfoApiClient {
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/schedule.md#search-weekly-schedules
          */
         this.getScheduleSearch = (query, options) => {
-            const params = {
-                query,
-                limit: options?.limit,
-                year: options?.year,
-                sort: options?.sort,
-                type: options?.type,
-            };
+            const params = { query, limit: options?.limit, year: options?.year, sort: options?.sort, type: options?.type };
             if (options?.cursor) {
                 params.cursorYear = options.cursor.year;
                 params.cursorWeek = options.cursor.week;
@@ -201,17 +251,11 @@ export class NeuroInfoApiClient {
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/x-feed.md#endpoint
          */
         this.getXFeed = (user) => this.request("/x-feed", { user });
-        this.baseUrl = options.baseUrl ?? `https://${baseDomain}/api/${apiVer}`;
-        this.apiInstance = HttpClient.create({
-            baseURL: this.baseUrl,
-            timeout: 10000,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
+        const apiUrl = options.apiBaseUrl != null ? createClientUrls(options.apiBaseUrl, options.useTls).api : (options.baseUrl ?? createClientUrls().api);
+        this.apiInstance = new HttpClient({ baseURL: apiUrl, timeout: options.requestTimeoutMs, headers: { "Content-Type": "application/json" } });
         if (token != null)
             this.setApiToken(token);
-        bootCheck(this.baseUrl);
+        bootCheck(apiUrl);
     }
     /**
      * Parses an error into a NeuroApiError with proper code and message.
@@ -233,18 +277,14 @@ export class NeuroInfoApiClient {
         this.apiToken = token;
     }
     /** Generic request wrapper that handles errors consistently. */
-    async request(url, params, transform) {
+    async request(url, params) {
         try {
             const response = await this.apiInstance.request(url, {
-                query: params,
-                headers: this.apiToken != null ? { Authorization: `Bearer ${this.apiToken}` } : undefined,
+                ...(params !== undefined ? { query: params } : {}),
+                ...(this.apiToken != null ? { headers: { Authorization: `Bearer ${this.apiToken}` } } : {}),
             });
             // Unwrap { data: T } response envelope
-            const data = transform
-                ? transform(response)
-                : response && typeof response === "object" && "data" in response
-                    ? response.data
-                    : response;
+            const data = response && typeof response === "object" && "data" in response ? response.data : response;
             return { data: data, error: null };
         }
         catch (error) {
@@ -261,27 +301,31 @@ export class NeuroInfoApiClient {
 export class NeuroInfoApiEventer {
     /** Interval in milliseconds between event fetches. Default is 60000 (60 seconds). Minimum is 10000 (10 seconds). */
     get fetchInterval() {
-        return this._fetchInterval;
+        return this.events.loop.intervalMs;
     }
     set fetchInterval(value) {
-        this._fetchInterval = Math.max(value, 10000);
+        if (!Number.isFinite(value))
+            return;
+        const interval = Math.max(value, 10000);
+        if (this.events.loop.intervalMs === interval)
+            return;
+        this.events.loop.intervalMs = interval;
+        if (this.events.loop.timer != null) {
+            clearIntervalHandle(this.events.loop.timer);
+            this.events.loop.timer = setInterval(() => void this.processEvents(), this.events.loop.intervalMs);
+        }
     }
     constructor() {
-        this.eventListeners = new Map();
-        this.errorHandlers = new Map();
-        this.cached = new Map();
-        this.fetchTimeout = null;
-        this.isProcessing = false;
-        this._fetchInterval = 60000;
         this.client = new NeuroInfoApiClient();
+        this.events = { listeners: new Map(), cache: {}, loop: { timer: null, processing: false, intervalMs: 60000 } };
         console.warn("NeuroInfoApiEventer is deprecated. Please use NeuroInfoApiWebsocketClient for real-time updates instead.");
     }
     async processEvents() {
-        if (this.isProcessing)
+        if (this.events.loop.processing)
             return;
-        this.isProcessing = true;
+        this.events.loop.processing = true;
         try {
-            const events = new Set(this.eventListeners.keys());
+            const events = new Set(this.events.listeners.keys());
             const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
             const needsStream = events.has("streamOnline") || events.has("streamOffline") || events.has("streamUpdate");
             const needsSchedule = events.has("scheduleUpdate");
@@ -293,27 +337,33 @@ export class NeuroInfoApiEventer {
             if (needsSubathon && (needsStream || needsSchedule))
                 await delay(100);
             const subResult = needsSubathon ? await this.client.getCurrentSubathons() : null;
-            const emitError = (event, error) => this.errorHandlers.get(event)?.forEach((handler) => handler(error));
-            const emit = (listeners, data) => listeners.forEach((entry) => entry.callback(data));
+            // The REST endpoint reports an empty active-subathon set as SB1/404. For
+            // polling transitions this is a valid empty state, not a fetch failure.
+            const subData = subResult?.data ?? (subResult?.error.code === "SB1" ? [] : null);
+            const emitError = (listeners, error) => listeners.forEach((entry) => {
+                if (entry.onError)
+                    invokeSafely(entry.onError, error);
+            });
+            const emit = (listeners, data) => listeners.forEach((entry) => invokeSafely(entry.callback, data));
             const hasChanged = (cached, current) => !cached || JSON.stringify(cached) !== JSON.stringify(current);
-            for (const [event, listeners] of this.eventListeners) {
+            for (const [event, listeners] of this.events.listeners) {
                 switch (event) {
                     case "streamOnline":
                     case "streamOffline":
                     case "streamUpdate": {
                         if (!strResult?.data) {
                             if (strResult?.error)
-                                emitError(event, strResult.error);
+                                emitError(listeners, strResult.error);
                             break;
                         }
-                        const cached = this.cached.get("streamData");
+                        const cached = this.events.cache.streamData;
                         let shouldEmit = false;
                         if (event === "streamOnline")
-                            shouldEmit = !cached?.isLive && strResult.data.isLive;
+                            shouldEmit = cached?.isLive !== true && strResult.data.isLive;
                         else if (event === "streamOffline")
-                            shouldEmit = cached?.isLive && !strResult.data.isLive;
+                            shouldEmit = cached?.isLive === true && !strResult.data.isLive;
                         else
-                            shouldEmit = cached && !(cached?.isLive !== strResult.data.isLive) && hasChanged(cached, strResult.data);
+                            shouldEmit = cached != null && cached.isLive === strResult.data.isLive && hasChanged(cached, strResult.data);
                         if (shouldEmit)
                             emit(listeners, strResult.data);
                         break;
@@ -321,41 +371,39 @@ export class NeuroInfoApiEventer {
                     case "scheduleUpdate": {
                         if (!scheResult?.data) {
                             if (scheResult?.error)
-                                emitError(event, scheResult.error);
+                                emitError(listeners, scheResult.error);
                             break;
                         }
-                        if (hasChanged(this.cached.get("latestSchedule"), scheResult.data))
+                        if (hasChanged(this.events.cache.latestSchedule, scheResult.data))
                             emit(listeners, scheResult.data);
                         break;
                     }
                     case "subathonUpdate": {
-                        if (!subResult?.data) {
+                        if (!subData) {
                             if (subResult?.error)
-                                emitError(event, subResult.error);
+                                emitError(listeners, subResult.error);
                             break;
                         }
-                        const cached = this.cached.get("currentSubathons");
-                        for (const sub of subResult.data) {
+                        const cached = this.events.cache.currentSubathons;
+                        for (const sub of subData) {
                             const cachedSub = cached?.find((s) => s.year === sub.year);
                             if (hasChanged(cachedSub, sub))
                                 emit(listeners, sub);
                         }
-                        if (cached) {
-                            for (const cachedSub of cached) {
-                                if (!subResult.data.find((s) => s.year === cachedSub.year))
+                        if (cached)
+                            for (const cachedSub of cached)
+                                if (!subData.find((s) => s.year === cachedSub.year))
                                     emit(listeners, { ...cachedSub, isActive: false });
-                            }
-                        }
                         break;
                     }
                     case "subathonGoalUpdate": {
-                        if (!subResult?.data) {
+                        if (!subData) {
                             if (subResult?.error)
-                                emitError(event, subResult.error);
+                                emitError(listeners, subResult.error);
                             break;
                         }
-                        const cached = this.cached.get("currentSubathons");
-                        for (const sub of subResult.data) {
+                        const cached = this.events.cache.currentSubathons;
+                        for (const sub of subData) {
                             const cachedSub = cached?.find((s) => s.year === sub.year);
                             for (const goalNumber in sub.goals) {
                                 const goal = sub.goals[goalNumber];
@@ -367,33 +415,27 @@ export class NeuroInfoApiEventer {
                     }
                 }
             }
-            const updateCache = (key, result) => {
-                if (result?.data !== undefined && result?.data !== null)
-                    this.cached.set(key, result.data);
-                else if (result?.error)
-                    this.cached.delete(key);
-            };
-            updateCache("streamData", strResult);
-            updateCache("latestSchedule", scheResult);
-            updateCache("currentSubathons", subResult);
+            if (strResult?.data != null)
+                this.events.cache.streamData = strResult.data;
+            if (scheResult?.data != null)
+                this.events.cache.latestSchedule = scheResult.data;
+            if (subData)
+                this.events.cache.currentSubathons = subData;
         }
         finally {
-            this.isProcessing = false;
+            this.events.loop.processing = false;
         }
     }
     /** Starts the event loop that fetches events at regular intervals. */
     startEventLoop() {
-        if (this.fetchTimeout != null)
+        if (this.events.loop.timer != null)
             return;
-        this.processEvents();
-        this.fetchTimeout = setInterval(() => this.processEvents(), this.fetchInterval);
+        void this.processEvents();
+        this.events.loop.timer = setInterval(() => void this.processEvents(), this.fetchInterval);
     }
     /** Stops the event loop that fetches events at regular intervals. */
     stopEventLoop() {
-        if (this.fetchTimeout == null)
-            return;
-        clearInterval(this.fetchTimeout);
-        this.fetchTimeout = null;
+        this.events.loop.timer = clearIntervalHandle(this.events.loop.timer);
     }
     /** Returns the underlying NeuroInfoApiClient instance. */
     getClient() {
@@ -412,19 +454,14 @@ export class NeuroInfoApiEventer {
      * @returns A function to unsubscribe from the event.
      */
     on(event, callback, onError) {
-        if (!this.eventListeners.has(event))
-            this.eventListeners.set(event, new Set());
-        const entry = { callback };
-        this.eventListeners.get(event).add(entry);
-        if (onError) {
-            if (!this.errorHandlers.has(event))
-                this.errorHandlers.set(event, new Set());
-            this.errorHandlers.get(event).add(onError);
-        }
+        if (!this.events.listeners.has(event))
+            this.events.listeners.set(event, new Set());
+        const entry = { callback, ...(onError !== undefined ? { onError } : {}) };
+        this.events.listeners.get(event).add(entry);
         return () => {
-            this.eventListeners.get(event)?.delete(entry);
-            if (onError)
-                this.errorHandlers.get(event)?.delete(onError);
+            const listeners = this.events.listeners.get(event);
+            if (listeners?.delete(entry) && listeners.size === 0)
+                this.events.listeners.delete(event);
         };
     }
     /**
@@ -434,11 +471,13 @@ export class NeuroInfoApiEventer {
      * @param callback - The callback function to remove.
      */
     off(event, callback) {
-        const listeners = this.eventListeners.get(event);
+        const listeners = this.events.listeners.get(event);
         if (listeners) {
             for (const entry of listeners) {
                 if (entry.callback === callback) {
                     listeners.delete(entry);
+                    if (listeners.size === 0)
+                        this.events.listeners.delete(event);
                     break;
                 }
             }
@@ -456,11 +495,11 @@ export class NeuroInfoApiEventer {
     once(event, callback, onError) {
         const unsubscribe = this.on(event, ((data) => {
             unsubscribe();
-            callback(data);
+            return callback(data);
         }), onError
             ? (error) => {
                 unsubscribe();
-                onError(error);
+                return onError(error);
             }
             : undefined);
         return unsubscribe;
@@ -472,15 +511,10 @@ export class NeuroInfoApiEventer {
      * @param data - The data to pass to the event listeners.
      */
     emit(event, data) {
-        const listeners = this.eventListeners.get(event);
+        const listeners = this.events.listeners.get(event);
         if (!listeners)
             return;
-        listeners.forEach((entry) => {
-            try {
-                entry.callback(data);
-            }
-            catch (error) { }
-        });
+        listeners.forEach((entry) => invokeSafely(entry.callback, data));
     }
     /**
      * Removes all event listeners for a specific event or all events.
@@ -490,12 +524,10 @@ export class NeuroInfoApiEventer {
      */
     removeAllListeners(event) {
         if (event) {
-            this.eventListeners.delete(event);
-            this.errorHandlers.delete(event);
+            this.events.listeners.delete(event);
         }
         else {
-            this.eventListeners.clear();
-            this.errorHandlers.clear();
+            this.events.listeners.clear();
         }
     }
 }
@@ -507,33 +539,90 @@ export class NeuroInfoApiEventer {
  * REST API before connecting, so the token is never exposed in URL query parameters.
  */
 export class NeuroInfoApiWebsocketClient {
+    /** Whether to automatically reconnect on disconnect. Default is true. */
+    get autoReconnect() {
+        return this.settings.autoReconnect;
+    }
+    set autoReconnect(value) {
+        this.settings.autoReconnect = value;
+        if (!value) {
+            this.clearReconnectTimeout();
+            const connection = this.connection;
+            if (connection?.isAutomaticReconnect && connection.sessionId == null)
+                this.disconnect();
+        }
+    }
+    /** Whether to automatically send heartbeat pings while connected. Default is true. */
+    get autoHeartbeat() {
+        return this.settings.autoHeartbeat;
+    }
+    set autoHeartbeat(value) {
+        if (this.settings.autoHeartbeat === value)
+            return;
+        this.settings.autoHeartbeat = value;
+        const connection = this.connection;
+        if (!connection || !this.isConnected)
+            return;
+        if (value)
+            this.startHeartbeat(connection);
+        else
+            this.stopHeartbeat(connection);
+    }
     /** Maximum number of reconnect attempts. Default is 10. Set to 0 for unlimited. */
     get maxReconnectAttempts() {
-        return this._maxReconnectAttempts;
+        return this.settings.maxReconnectAttempts;
     }
     set maxReconnectAttempts(value) {
-        this._maxReconnectAttempts = Math.max(0, value);
+        if (Number.isFinite(value))
+            this.settings.maxReconnectAttempts = Math.max(0, value);
     }
     /** Base delay in milliseconds for reconnection backoff. Default is 1000ms. */
     get reconnectBaseDelay() {
-        return this._reconnectBaseDelay;
+        return this.settings.reconnectBaseDelay;
     }
     set reconnectBaseDelay(value) {
-        this._reconnectBaseDelay = Math.max(100, value);
+        if (Number.isFinite(value))
+            this.settings.reconnectBaseDelay = Math.max(100, value);
     }
     /** Interval in milliseconds for heartbeat pings. Default is 30000ms. Minimum is 5000ms. */
     get heartbeatIntervalMs() {
-        return this._heartbeatIntervalMs;
+        return this.settings.heartbeatIntervalMs;
     }
     set heartbeatIntervalMs(value) {
-        this._heartbeatIntervalMs = Math.max(5000, value);
+        if (!Number.isFinite(value))
+            return;
+        const interval = Math.max(5000, value);
+        if (this.settings.heartbeatIntervalMs === interval)
+            return;
+        this.settings.heartbeatIntervalMs = interval;
+        const connection = this.connection;
+        const heartbeat = connection?.heartbeat;
+        if (connection && heartbeat)
+            this.scheduleHeartbeatInterval(connection, heartbeat);
     }
     /** Timeout in milliseconds waiting for a heartbeat pong. Default is 10000ms. Minimum is 1000ms. */
     get heartbeatTimeoutMs() {
-        return this._heartbeatTimeoutMs;
+        return this.settings.heartbeatTimeoutMs;
     }
     set heartbeatTimeoutMs(value) {
-        this._heartbeatTimeoutMs = Math.max(1000, value);
+        if (!Number.isFinite(value))
+            return;
+        const timeout = Math.max(1000, value);
+        if (this.settings.heartbeatTimeoutMs === timeout)
+            return;
+        this.settings.heartbeatTimeoutMs = timeout;
+        const connection = this.connection;
+        const heartbeat = connection?.heartbeat;
+        if (connection && heartbeat?.timeout != null)
+            this.scheduleHeartbeatTimeout(connection, heartbeat);
+    }
+    /** Timeout in milliseconds for ticket fetching and the WebSocket welcome. Default is 15000ms. Minimum is 1000ms. */
+    get connectTimeoutMs() {
+        return this.settings.connectTimeoutMs;
+    }
+    set connectTimeoutMs(value) {
+        if (Number.isFinite(value))
+            this.settings.connectTimeoutMs = Math.max(1000, value);
     }
     /**
      * Creates a new WebSocket client instance.
@@ -541,132 +630,238 @@ export class NeuroInfoApiWebsocketClient {
      * @param options - Optional configuration options
      */
     constructor(token, options = {}) {
-        this.websocket = null;
-        this.sessionId = null;
-        this.eventListeners = new Map();
-        this.systemListeners = new Map();
-        this.subscribedEvents = new Set();
-        this.pendingSubscriptions = new Set();
-        this.reconnectAttempts = 0;
-        this.reconnectTimeout = null;
-        this.isIntentionallyClosed = false;
-        this.heartbeatIntervalHandle = null;
-        this.heartbeatTimeoutHandle = null;
-        this.pendingHeartbeat = false;
-        /** Whether to automatically reconnect on disconnect. Default is true. */
-        this.autoReconnect = true;
-        /** Whether to automatically send heartbeat pings while connected. Default is true. */
-        this.autoHeartbeat = true;
-        this._maxReconnectAttempts = 10;
-        this._reconnectBaseDelay = 1000;
-        this._heartbeatIntervalMs = 30000;
-        this._heartbeatTimeoutMs = 10000;
-        this.token = token;
-        this.baseUrl = options.baseUrl ?? `wss://${baseDomain}/api/${apiVer}/ws`;
-        this.authMethod = options.authMethod ?? "ticket";
+        this.connection = null;
+        this.listeners = { events: new Map(), system: new Map() };
+        this.reconnect = { attempts: 0, timeout: null };
+        this.lifecycle = { intentionallyClosed: false, destroyGeneration: 0 };
+        this.settings = { autoReconnect: true, autoHeartbeat: true, maxReconnectAttempts: 10, reconnectBaseDelay: 1000, heartbeatIntervalMs: 30000, heartbeatTimeoutMs: 10000, connectTimeoutMs: 15000 };
+        this.auth = { token, method: options.authMethod ?? "ticket" };
+        const legacyWebsocketUrl = options.websocketUrl ?? options.baseUrl;
+        this.urls = legacyWebsocketUrl
+            ? {
+                api: options.apiBaseUrl != null ? createClientUrls(options.apiBaseUrl, options.useTls).api : deriveApiUrl(legacyWebsocketUrl),
+                websocket: legacyWebsocketUrl,
+            }
+            : createClientUrls(options.apiBaseUrl, options.useTls);
+        if (options.autoReconnect != null)
+            this.autoReconnect = options.autoReconnect;
         if (options.autoHeartbeat != null)
             this.autoHeartbeat = options.autoHeartbeat;
+        if (options.maxReconnectAttempts != null)
+            this.maxReconnectAttempts = options.maxReconnectAttempts;
+        if (options.reconnectBaseDelay != null)
+            this.reconnectBaseDelay = options.reconnectBaseDelay;
         if (options.heartbeatIntervalMs != null)
             this.heartbeatIntervalMs = options.heartbeatIntervalMs;
         if (options.heartbeatTimeoutMs != null)
             this.heartbeatTimeoutMs = options.heartbeatTimeoutMs;
-        // API base URL for ticket fetching; defaults to /api/<apiVer> for versioned ticket errors.
-        this.apiBaseUrl = options.apiBaseUrl ?? this.baseUrl.replace(/^wss?:\/\//, "https://").replace(/\/ws.*$/, "");
-        bootCheck(this.apiBaseUrl);
+        if (options.connectTimeoutMs != null)
+            this.connectTimeoutMs = options.connectTimeoutMs;
+        bootCheck(this.urls.api);
     }
     /** Returns the current connection state. */
     get readyState() {
-        return this.websocket?.readyState ?? WebSocket.CLOSED;
+        return this.connection?.socket?.readyState ?? 3 /* WebSocketState.Closed */;
     }
     /** Returns true if the WebSocket is connected and ready. */
     get isConnected() {
-        return this.websocket?.readyState === WebSocket.OPEN;
+        return this.connection?.socket?.readyState === 1 /* WebSocketState.Open */ && this.connection.sessionId != null;
     }
     /** Returns the current session ID (available after connection). */
     getSessionId() {
-        return this.sessionId;
+        return this.connection?.sessionId ?? null;
     }
     /** Updates the authentication token. Reconnects if currently connected. */
     setToken(token) {
-        this.token = token;
-        if (this.isConnected) {
+        const shouldReconnect = this.connection?.socket != null || this.connection?.connect?.promise != null;
+        const destroyGeneration = this.lifecycle.destroyGeneration;
+        this.auth.token = token;
+        if (shouldReconnect) {
             this.disconnect();
-            this.connect();
+            if (this.lifecycle.destroyGeneration !== destroyGeneration)
+                return;
+            void this.connect().catch((error) => {
+                const parsed = error instanceof NeuroApiError ? error : new NeuroApiError("WS_RECONNECT_ERROR", String(error));
+                this.emitSystem("_error", parsed);
+            });
         }
+    }
+    /** Alias matching the HTTP client token setter. */
+    setApiToken(token) {
+        this.setToken(token);
     }
     /**
      * Connects to the WebSocket server.
      * Uses the configured `authMethod` to authenticate.
      * @returns Promise that resolves when connected, rejects on error.
      */
-    async connect() {
-        if (this.websocket?.readyState === WebSocket.OPEN || this.websocket?.readyState === WebSocket.CONNECTING)
-            return;
-        this.isIntentionallyClosed = false;
-        if (this.authMethod === "header")
+    connect() {
+        return this.connectWithContext(false);
+    }
+    /** Starts either a user-requested or automatic reconnect attempt. */
+    connectWithContext(isAutomaticReconnect) {
+        const currentConnection = this.connection;
+        if (currentConnection?.socket?.readyState === 1 /* WebSocketState.Open */ ||
+            currentConnection?.socket?.readyState === 0 /* WebSocketState.Connecting */)
+            return currentConnection.connect?.promise || Promise.resolve();
+        if (currentConnection?.connect?.promise)
+            return currentConnection.connect.promise;
+        if (!isAutomaticReconnect) {
+            // A user-requested connection starts a fresh retry cycle after a previous exhaustion.
+            this.reconnect.attempts = 0;
+        }
+        this.lifecycle.intentionallyClosed = false;
+        this.clearReconnectTimeout();
+        const connect = { promise: null, abortController: new AbortController(), timeout: null, abortError: new NeuroApiError("WS_CONNECT_CANCELLED", "WebSocket connection was cancelled"), onAbort: () => { } };
+        const connection = { socket: null, sessionId: null, connect, heartbeat: null, isAutomaticReconnect };
+        this.connection = connection;
+        const cancelled = new Promise((_, reject) => {
+            connect.onAbort = () => reject(connect.abortError);
+        });
+        connect.abortController.signal.addEventListener("abort", connect.onAbort, { once: true });
+        connect.timeout = setTimeout(() => {
+            connect.timeout = null;
+            connect.abortError = new NeuroApiError("WS_CONNECT_TIMEOUT", "WebSocket connection timed out");
+            connect.abortController.abort();
+            if (this.connection !== connection || this.lifecycle.intentionallyClosed)
+                return;
+            this.connection = null;
+            connection.connect = null;
+            this.stopHeartbeat(connection);
+            const socket = connection.socket;
+            if (socket) {
+                if (socket.readyState !== 2 /* WebSocketState.Closing */ && socket.readyState !== 3 /* WebSocketState.Closed */)
+                    socket.close(4000, "Connection timeout");
+                this.emitSystem("_disconnected", 4000, "Connection timeout");
+                if (!this.lifecycle.intentionallyClosed && this.autoReconnect)
+                    this.scheduleReconnect();
+            }
+        }, this.connectTimeoutMs);
+        const promise = Promise.race([this.connectInternal(connection, connect), cancelled]);
+        connect.promise = promise;
+        promise.then(() => {
+            connect.timeout = clearTimeoutHandle(connect.timeout);
+            connect.abortController.signal.removeEventListener("abort", connect.onAbort);
+            if (this.connection === connection)
+                connection.connect = null;
+        }, () => {
+            connect.timeout = clearTimeoutHandle(connect.timeout);
+            connect.abortController.signal.removeEventListener("abort", connect.onAbort);
+            if (this.connection === connection) {
+                connection.connect = null;
+                if (!connection.socket)
+                    this.connection = null;
+            }
+        });
+        return promise;
+    }
+    async connectInternal(connection, connect) {
+        const signal = connect.abortController.signal;
+        if (this.auth.method === "header")
             // Send token via Authorization header (Node.js only, not supported in browsers)
-            return this.connectWithUrl(this.baseUrl, { Authorization: `Bearer ${this.token}` });
+            return this.connectWithUrl(this.urls.websocket, connection, connect, { Authorization: `Bearer ${this.auth.token}` });
         else {
             // Fetch one-time ticket via REST API (token never exposed in URL, works in browsers)
-            const ticket = await this.fetchTicket();
-            return this.connectWithUrl(`${this.baseUrl}?ticket=${encodeURIComponent(ticket)}`);
+            const ticket = await this.fetchTicket(signal);
+            if (signal.aborted || this.connection !== connection || this.lifecycle.intentionallyClosed)
+                throw new NeuroApiError("WS_CONNECT_CANCELLED", "WebSocket connection was cancelled");
+            const websocketUrl = new URL(this.urls.websocket);
+            websocketUrl.searchParams.set("ticket", ticket);
+            return this.connectWithUrl(websocketUrl.toString(), connection, connect);
         }
     }
     /** Fetches a one-time connection ticket from the API */
-    async fetchTicket() {
-        const response = await fetch(`${this.apiBaseUrl}/ws/ticket`, {
-            headers: { Authorization: `Bearer ${this.token}` },
-        });
-        if (!response.ok) {
-            const text = await response.text().catch(() => "Unknown error");
-            throw new NeuroApiError("TICKET_ERROR", `Failed to fetch connection ticket: ${text}`, response.status);
+    async fetchTicket(signal) {
+        try {
+            const json = await new HttpClient({ baseURL: this.urls.api }).request("/ws/ticket", {
+                headers: { Authorization: `Bearer ${this.auth.token}` },
+                signal,
+            });
+            if (!json.data?.ticket)
+                throw new NeuroApiError("TICKET_ERROR", "Invalid ticket response from server");
+            return json.data.ticket;
         }
-        const json = await response.json();
-        if (!json?.data?.ticket)
-            throw new NeuroApiError("TICKET_ERROR", "Invalid ticket response from server");
-        return json.data.ticket;
+        catch (error) {
+            if (signal.aborted)
+                throw new NeuroApiError("WS_CONNECT_CANCELLED", "WebSocket connection was cancelled");
+            if (error instanceof NeuroApiError)
+                throw error;
+            const detail = error instanceof HttpRequestError
+                ? (error.data?.error?.message ?? error.message)
+                : error instanceof Error
+                    ? error.message
+                    : "Unknown error";
+            throw new NeuroApiError("TICKET_ERROR", `Failed to fetch connection ticket: ${detail}`, error instanceof HttpRequestError ? error.status : undefined);
+        }
     }
     /** Internal: Connect to WebSocket with the given URL and optional headers */
-    connectWithUrl(url, headers) {
+    connectWithUrl(url, connection, connect, headers) {
+        const signal = connect.abortController.signal;
         return new Promise((resolve, reject) => {
-            // Pass headers using runtime-compatible constructor variants.
-            const WS = WebSocket;
-            if (headers) {
-                try {
-                    this.websocket = new WS(url, { headers });
-                }
-                catch {
-                    this.websocket = new WS(url, undefined, { headers });
-                }
+            if (signal.aborted || this.connection !== connection || this.lifecycle.intentionallyClosed) {
+                reject(new NeuroApiError("WS_CONNECT_CANCELLED", "WebSocket connection was cancelled"));
+                return;
             }
-            else
-                this.websocket = new WebSocket(url);
+            // Pass headers using runtime-compatible constructor variants.
+            let socket;
+            try {
+                const WS = WebSocket;
+                if (headers) {
+                    try {
+                        socket = new WS(url, { headers });
+                    }
+                    catch {
+                        socket = new WS(url, undefined, { headers });
+                    }
+                }
+                else
+                    socket = new WS(url);
+            }
+            catch (error) {
+                reject(new NeuroApiError("WS_ERROR", `Failed to create WebSocket: ${error instanceof Error ? error.message : "Unknown error"}`));
+                return;
+            }
+            if (signal.aborted || this.connection !== connection || this.lifecycle.intentionallyClosed) {
+                socket.close(1000, "Connection cancelled");
+                reject(new NeuroApiError("WS_CONNECT_CANCELLED", "WebSocket connection was cancelled"));
+                return;
+            }
+            connection.socket = socket;
             let settled = false;
-            const onOpen = () => {
-                this.reconnectAttempts = 0;
-            };
             const onMessage = (event) => {
+                if (this.connection !== connection || connection.socket !== socket)
+                    return;
                 try {
                     const msg = JSON.parse(event.data);
                     if (msg.type === "welcome") {
-                        this.sessionId = msg.data.sessionId;
-                        this.emitSystem("_connected", this.sessionId);
+                        this.reconnect.attempts = 0;
+                        connection.sessionId = msg.data.sessionId;
+                        signal.removeEventListener("abort", onAbort);
                         this.resubscribeEvents();
-                        this.startHeartbeat();
+                        this.startHeartbeat(connection);
+                        this.emitSystem("_connected", connection.sessionId);
+                        if (this.connection !== connection || connection.socket !== socket)
+                            return;
                         if (!settled) {
                             settled = true;
                             resolve();
                         }
                     }
-                    this.handleParsedMessage(msg);
+                    this.handleParsedMessage(msg, connection);
                 }
-                catch { }
+                catch {
+                    this.emitSystem("_error", new NeuroApiError("WS_PARSE_ERROR", "Failed to parse message"));
+                }
             };
             const onError = (error) => {
-                cleanup();
+                if (this.connection !== connection || connection.socket !== socket)
+                    return;
+                this.emitSystem("_error", error);
                 if (!settled) {
                     settled = true;
                     reject(new NeuroApiError("WS_ERROR", "WebSocket connection error"));
+                    if (socket.readyState !== 2 /* WebSocketState.Closing */ && socket.readyState !== 3 /* WebSocketState.Closed */)
+                        socket.close(1011, "WebSocket connection error");
                 }
             };
             const onClose = (event) => {
@@ -675,59 +870,82 @@ export class NeuroInfoApiWebsocketClient {
                     settled = true;
                     reject(new NeuroApiError("WS_CLOSED", `Connection closed: ${event.reason || "Unknown reason"}`, event.code));
                 }
+                if (this.connection !== connection || connection.socket !== socket)
+                    return;
+                this.handleClose(connection, event);
             };
             const cleanup = () => {
-                this.websocket?.removeEventListener("open", onOpen);
-                this.websocket?.removeEventListener("message", onMessage);
-                this.websocket?.removeEventListener("error", onError);
-                this.websocket?.removeEventListener("close", onClose);
+                socket.removeEventListener("message", onMessage);
+                socket.removeEventListener("error", onError);
+                socket.removeEventListener("close", onClose);
+                signal.removeEventListener("abort", onAbort);
             };
-            this.websocket.addEventListener("open", onOpen);
-            this.websocket.addEventListener("message", onMessage);
-            this.websocket.addEventListener("error", onError);
-            this.websocket.addEventListener("close", onClose);
-            this.websocket.addEventListener("close", (event) => this.handleClose(event));
-            this.websocket.addEventListener("error", (event) => this.emitSystem("_error", event));
+            const onAbort = () => {
+                cleanup();
+                if (!settled) {
+                    settled = true;
+                    reject(new NeuroApiError("WS_CONNECT_CANCELLED", "WebSocket connection was cancelled"));
+                }
+            };
+            socket.addEventListener("message", onMessage);
+            socket.addEventListener("error", onError);
+            socket.addEventListener("close", onClose);
+            signal.addEventListener("abort", onAbort, { once: true });
         });
     }
     /** Disconnects from the WebSocket server. */
     disconnect() {
-        this.isIntentionallyClosed = true;
+        this.lifecycle.intentionallyClosed = true;
         this.clearReconnectTimeout();
-        this.stopHeartbeat();
-        if (this.websocket) {
-            this.websocket.close(1000, "Client disconnect");
-            this.websocket = null;
+        const connection = this.connection;
+        this.connection = null;
+        if (!connection)
+            return;
+        const connect = connection.connect;
+        connection.connect = null;
+        connect?.abortController.abort();
+        const pendingConnect = connect?.promise;
+        void pendingConnect?.catch(() => { });
+        this.stopHeartbeat(connection);
+        const socket = connection.socket;
+        if (socket) {
+            if (socket.readyState !== 2 /* WebSocketState.Closing */ && socket.readyState !== 3 /* WebSocketState.Closed */)
+                socket.close(1000, "Client disconnect");
+            this.emitSystem("_disconnected", 1000, "Client disconnect");
         }
-        this.sessionId = null;
     }
-    handleParsedMessage(msg) {
+    handleParsedMessage(msg, connection) {
         switch (msg.type) {
             case "event":
                 this.handleEventMessage(msg);
                 break;
             case "addSuccess":
-                if (msg.data.subscribed) {
-                    this.subscribedEvents.add(msg.data.eventType);
-                    this.pendingSubscriptions.delete(msg.data.eventType);
+                {
+                    const subscription = this.listeners.events.get(msg.data.eventType);
+                    if (!subscription || subscription.state !== "subscribing" /* SubscriptionState.Subscribing */)
+                        break;
+                    // `false` means the server already had this subscription, which is still the desired state.
+                    subscription.state = "subscribed" /* SubscriptionState.Subscribed */;
                     this.emitSystem("_eventAdded", msg.data.eventType);
+                    this.syncSubscription(msg.data.eventType, subscription);
                 }
-                else
-                    this.emitSystem("_error", new NeuroApiError("WS_SUBSCRIBE_FAILED", `Server rejected event subscription: ${msg.data.eventType}`));
                 break;
             case "removeSuccess":
-                if (msg.data.unsubscribed) {
-                    this.subscribedEvents.delete(msg.data.eventType);
+                {
+                    const subscription = this.listeners.events.get(msg.data.eventType);
+                    if (!subscription || subscription.state !== "unsubscribing" /* SubscriptionState.Unsubscribing */)
+                        break;
+                    // `false` means the server already removed this subscription, which is still the desired state.
+                    subscription.state = "unsubscribed" /* SubscriptionState.Unsubscribed */;
                     this.emitSystem("_eventRemoved", msg.data.eventType);
+                    this.syncSubscription(msg.data.eventType, subscription);
                 }
-                else
-                    this.emitSystem("_error", new NeuroApiError("WS_UNSUBSCRIBE_FAILED", `Server rejected event unsubscription: ${msg.data.eventType}`));
                 break;
             case "invalid":
                 this.emitSystem("_error", new NeuroApiError("WS_INVALID", msg.data.message || msg.data.reason));
                 break;
             case "pong":
-                this.acknowledgeHeartbeat();
+                this.acknowledgeHeartbeat(connection);
                 this.emitSystem("_pong");
                 break;
         }
@@ -735,105 +953,144 @@ export class NeuroInfoApiWebsocketClient {
     }
     handleEventMessage(msg) {
         const eventType = msg.data.eventType;
-        const listeners = this.eventListeners.get(eventType);
-        if (!listeners)
+        const subscription = this.listeners.events.get(eventType);
+        if (!subscription)
             return;
-        listeners.forEach((entry) => {
-            try {
-                entry.callback(msg.data.eventData, msg.data.timestamp);
-            }
-            catch { }
-        });
+        subscription.listeners.forEach((entry) => invokeSafely(entry.callback, msg.data.eventData, msg.data.timestamp));
     }
-    handleClose(event) {
-        this.stopHeartbeat();
-        this.sessionId = null;
+    handleClose(connection, event) {
+        if (this.connection !== connection)
+            return;
+        this.connection = null;
+        connection.connect = null;
+        this.stopHeartbeat(connection);
         this.emitSystem("_disconnected", event.code, event.reason);
-        if (!this.isIntentionallyClosed && this.autoReconnect)
+        if (!this.lifecycle.intentionallyClosed && this.autoReconnect)
             this.scheduleReconnect();
     }
     scheduleReconnect() {
-        if (this._maxReconnectAttempts > 0 && this.reconnectAttempts >= this._maxReconnectAttempts) {
+        if (this.connection != null)
+            return;
+        if (this.reconnect.timeout || this.lifecycle.intentionallyClosed || !this.autoReconnect)
+            return;
+        if (this.reconnect.attempts < 0)
+            return; // Negative means the final failure was already emitted.
+        if (this.maxReconnectAttempts > 0 && this.reconnect.attempts >= this.maxReconnectAttempts) {
+            this.reconnect.attempts = -this.reconnect.attempts;
             this.emitSystem("_reconnectFailed");
             return;
         }
         // Exponential backoff with jitter: baseDelay * 2^attempts + random(0-1000ms)
-        const delay = Math.min(this._reconnectBaseDelay * Math.pow(2, this.reconnectAttempts) + Math.random() * 1000, 30000);
-        this.reconnectAttempts++;
-        this.emitSystem("_reconnecting", this.reconnectAttempts, delay);
-        this.reconnectTimeout = setTimeout(async () => {
-            this.reconnectTimeout = null;
+        const delay = Math.min(this.reconnectBaseDelay * Math.pow(2, this.reconnect.attempts) + Math.random() * 1000, 30000);
+        this.reconnect.attempts++;
+        const reconnectTimeout = setTimeout(async () => {
+            if (this.reconnect.timeout !== reconnectTimeout)
+                return;
+            this.reconnect.timeout = null;
+            if (this.connection != null || this.lifecycle.intentionallyClosed || !this.autoReconnect)
+                return;
             try {
-                await this.connect();
+                await this.connectWithContext(true);
             }
             catch {
-                if (!this.isIntentionallyClosed && this.autoReconnect)
+                if (!this.lifecycle.intentionallyClosed && this.autoReconnect)
                     this.scheduleReconnect();
             }
         }, delay);
+        this.reconnect.timeout = reconnectTimeout;
+        this.emitSystem("_reconnecting", this.reconnect.attempts, delay);
+        if (this.connection != null || this.lifecycle.intentionallyClosed || !this.autoReconnect)
+            this.clearReconnectTimeout();
     }
     clearReconnectTimeout() {
-        if (this.reconnectTimeout) {
-            clearTimeout(this.reconnectTimeout);
-            this.reconnectTimeout = null;
-        }
+        this.reconnect.timeout = clearTimeoutHandle(this.reconnect.timeout);
     }
-    startHeartbeat() {
-        this.stopHeartbeat();
-        if (!this.autoHeartbeat)
+    startHeartbeat(connection) {
+        this.stopHeartbeat(connection);
+        if (!this.autoHeartbeat || this.connection !== connection)
             return;
-        this.sendHeartbeatPing();
-        this.heartbeatIntervalHandle = setInterval(() => this.sendHeartbeatPing(), this.heartbeatIntervalMs);
+        const heartbeat = { interval: null, timeout: null };
+        connection.heartbeat = heartbeat;
+        this.sendHeartbeatPing(connection, heartbeat);
+        this.scheduleHeartbeatInterval(connection, heartbeat);
     }
-    stopHeartbeat() {
-        if (this.heartbeatIntervalHandle) {
-            clearInterval(this.heartbeatIntervalHandle);
-            this.heartbeatIntervalHandle = null;
-        }
-        if (this.heartbeatTimeoutHandle) {
-            clearTimeout(this.heartbeatTimeoutHandle);
-            this.heartbeatTimeoutHandle = null;
-        }
-        this.pendingHeartbeat = false;
+    scheduleHeartbeatInterval(connection, heartbeat) {
+        heartbeat.interval = clearIntervalHandle(heartbeat.interval);
+        if (this.connection !== connection || connection.heartbeat !== heartbeat || !this.autoHeartbeat)
+            return;
+        heartbeat.interval = setInterval(() => this.sendHeartbeatPing(connection, heartbeat), this.heartbeatIntervalMs);
     }
-    sendHeartbeatPing() {
-        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN)
+    stopHeartbeat(connection) {
+        const heartbeat = connection.heartbeat;
+        if (!heartbeat)
             return;
-        if (this.pendingHeartbeat) {
-            this.emitSystem("_error", new NeuroApiError("WS_HEARTBEAT_TIMEOUT", "Heartbeat pong timeout"));
-            this.websocket.close(4002, "Heartbeat timeout");
+        connection.heartbeat = null;
+        heartbeat.interval = clearIntervalHandle(heartbeat.interval);
+        heartbeat.timeout = clearTimeoutHandle(heartbeat.timeout);
+    }
+    sendHeartbeatPing(connection, heartbeat) {
+        const socket = connection.socket;
+        if (this.connection !== connection || connection.heartbeat !== heartbeat || socket?.readyState !== 1 /* WebSocketState.Open */)
             return;
-        }
-        this.pendingHeartbeat = true;
-        this.sendPing();
-        this.heartbeatTimeoutHandle = setTimeout(() => {
-            if (!this.pendingHeartbeat)
+        if (heartbeat.timeout != null)
+            return;
+        this.scheduleHeartbeatTimeout(connection, heartbeat);
+        this.sendPing(connection);
+    }
+    scheduleHeartbeatTimeout(connection, heartbeat) {
+        heartbeat.timeout = clearTimeoutHandle(heartbeat.timeout);
+        const socket = connection.socket;
+        if (this.connection !== connection || connection.heartbeat !== heartbeat || socket?.readyState !== 1 /* WebSocketState.Open */)
+            return;
+        heartbeat.timeout = setTimeout(() => {
+            heartbeat.timeout = null;
+            if (this.connection !== connection || connection.heartbeat !== heartbeat || socket.readyState !== 1 /* WebSocketState.Open */)
                 return;
-            if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN)
-                return;
             this.emitSystem("_error", new NeuroApiError("WS_HEARTBEAT_TIMEOUT", "Heartbeat pong timeout"));
-            this.websocket.close(4002, "Heartbeat timeout");
+            socket.close(4002, "Heartbeat timeout");
         }, this.heartbeatTimeoutMs);
     }
-    acknowledgeHeartbeat() {
-        if (!this.pendingHeartbeat)
+    acknowledgeHeartbeat(connection) {
+        const heartbeat = connection.heartbeat;
+        if (this.connection !== connection || heartbeat?.timeout == null)
             return;
-        this.pendingHeartbeat = false;
-        if (this.heartbeatTimeoutHandle) {
-            clearTimeout(this.heartbeatTimeoutHandle);
-            this.heartbeatTimeoutHandle = null;
-        }
+        heartbeat.timeout = clearTimeoutHandle(heartbeat.timeout);
     }
-    sendPing() {
-        this.send({ type: "ping", data: {} });
+    sendPing(connection) {
+        const socket = connection.socket;
+        if (this.connection === connection && socket?.readyState === 1 /* WebSocketState.Open */)
+            socket.send(JSON.stringify({ type: "ping", data: {} }));
     }
     resubscribeEvents() {
-        for (const eventType of this.subscribedEvents) {
-            this.sendSubscribe(eventType);
+        for (const [eventType, subscription] of this.listeners.events) {
+            subscription.state = "unsubscribed" /* SubscriptionState.Unsubscribed */;
+            this.syncSubscription(eventType, subscription);
         }
-        for (const eventType of this.pendingSubscriptions) {
+    }
+    /** Reconciles one event's server-side subscription with its current listeners. */
+    syncSubscription(eventType, subscription) {
+        const shouldSubscribe = subscription.listeners.size > 0;
+        if (!this.isConnected)
+            return;
+        if (shouldSubscribe && subscription.state === "unsubscribed" /* SubscriptionState.Unsubscribed */) {
+            subscription.state = "subscribing" /* SubscriptionState.Subscribing */;
             this.sendSubscribe(eventType);
+            return;
         }
+        if (!shouldSubscribe && subscription.state === "subscribed" /* SubscriptionState.Subscribed */) {
+            subscription.state = "unsubscribing" /* SubscriptionState.Unsubscribing */;
+            this.sendUnsubscribe(eventType);
+            return;
+        }
+        if (!shouldSubscribe && subscription.state === "unsubscribed" /* SubscriptionState.Unsubscribed */)
+            this.removeInactiveSubscription(eventType, subscription);
+    }
+    /** Deletes a local subscription only after the server is known not to hold it. */
+    removeInactiveSubscription(eventType, subscription) {
+        if (this.listeners.events.get(eventType) === subscription &&
+            subscription.listeners.size === 0 &&
+            subscription.state === "unsubscribed" /* SubscriptionState.Unsubscribed */)
+            this.listeners.events.delete(eventType);
     }
     sendSubscribe(eventType) {
         this.send({ type: "addEvent", data: { eventType } });
@@ -842,36 +1099,36 @@ export class NeuroInfoApiWebsocketClient {
         this.send({ type: "removeEvent", data: { eventType } });
     }
     send(message) {
-        if (this.websocket?.readyState === WebSocket.OPEN)
-            this.websocket.send(JSON.stringify(message));
+        const socket = this.connection?.socket;
+        if (this.isConnected && socket)
+            socket.send(JSON.stringify(message));
     }
     isEventType(event) {
         return wsEventTypes.has(event);
     }
     on(event, callback) {
         if (this.isEventType(event)) {
-            if (!this.eventListeners.has(event))
-                this.eventListeners.set(event, new Set());
-            const entry = { callback: callback };
-            this.eventListeners.get(event).add(entry);
-            if (!this.subscribedEvents.has(event) && !this.pendingSubscriptions.has(event)) {
-                this.pendingSubscriptions.add(event);
-                if (this.isConnected)
-                    this.sendSubscribe(event);
+            let subscription = this.listeners.events.get(event);
+            if (!subscription) {
+                subscription = { listeners: new Set(), state: "unsubscribed" /* SubscriptionState.Unsubscribed */ };
+                this.listeners.events.set(event, subscription);
             }
+            const entry = { callback: callback };
+            subscription.listeners.add(entry);
+            this.syncSubscription(event, subscription);
             return () => this.removeEventListenerEntry(event, entry);
         }
-        if (!this.systemListeners.has(event))
-            this.systemListeners.set(event, new Set());
-        this.systemListeners.get(event).add(callback);
+        if (!this.listeners.system.has(event))
+            this.listeners.system.set(event, new Set());
+        this.listeners.system.get(event).add(callback);
         return () => this.off(event, callback);
     }
     off(event, callback) {
         if (this.isEventType(event)) {
-            const listeners = this.eventListeners.get(event);
-            if (!listeners)
+            const subscription = this.listeners.events.get(event);
+            if (!subscription)
                 return;
-            for (const entry of listeners) {
+            for (const entry of subscription.listeners) {
                 if (entry.callback === callback) {
                     this.removeEventListenerEntry(event, entry);
                     break;
@@ -879,32 +1136,32 @@ export class NeuroInfoApiWebsocketClient {
             }
             return;
         }
-        this.systemListeners.get(event)?.delete(callback);
+        const listeners = this.listeners.system.get(event);
+        if (listeners?.delete(callback) && listeners.size === 0)
+            this.listeners.system.delete(event);
     }
     removeEventListenerEntry(event, entry) {
-        const listeners = this.eventListeners.get(event);
-        if (!listeners?.delete(entry) || listeners.size > 0)
+        const subscription = this.listeners.events.get(event);
+        if (!subscription?.listeners.delete(entry) || subscription.listeners.size > 0)
             return;
-        this.eventListeners.delete(event);
-        this.subscribedEvents.delete(event);
-        this.pendingSubscriptions.delete(event);
-        if (this.isConnected)
-            this.sendUnsubscribe(event);
+        // A closed connection cannot retain a server-side subscription, so an empty
+        // local entry can be removed without waiting for an acknowledgement.
+        if (!this.isConnected)
+            subscription.state = "unsubscribed" /* SubscriptionState.Unsubscribed */;
+        this.syncSubscription(event, subscription);
+        this.removeInactiveSubscription(event, subscription);
     }
     emitSystem(event, ...args) {
-        const listeners = this.systemListeners.get(event);
+        const listeners = this.listeners.system.get(event);
         if (!listeners)
             return;
-        listeners.forEach((cb) => {
-            try {
-                cb(...args);
-            }
-            catch { }
-        });
+        listeners.forEach((callback) => invokeSafely(callback, ...args));
     }
     /** Returns a list of currently subscribed event types. */
     getSubscribedEvents() {
-        return Array.from(this.subscribedEvents);
+        return Array.from(this.listeners.events)
+            .filter(([, subscription]) => subscription.state === "subscribed" /* SubscriptionState.Subscribed */)
+            .map(([eventType]) => eventType);
     }
     /** Requests the list of available events from the server. */
     requestEventList() {
@@ -912,11 +1169,10 @@ export class NeuroInfoApiWebsocketClient {
     }
     /** Removes all event listeners and disconnects. */
     destroy() {
+        this.lifecycle.destroyGeneration++;
+        this.listeners.events.clear();
+        this.listeners.system.clear();
         this.disconnect();
-        this.eventListeners.clear();
-        this.systemListeners.clear();
-        this.subscribedEvents.clear();
-        this.pendingSubscriptions.clear();
     }
 }
 export var Utils;
@@ -956,6 +1212,5 @@ const wsEventTypes = new Set([
     "streamRaidIncoming",
     "streamRaidOutgoing",
 ]);
-// Deprecated compatibility aliases. Remove with the next major API/client version. Or so... ¯\_(ツ)_/¯
 /** @deprecated Use `Utils.isScheduleFinal` instead. */
 export const isScheduleFinal = Utils.isScheduleFinal;

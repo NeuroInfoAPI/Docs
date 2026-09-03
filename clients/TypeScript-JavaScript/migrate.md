@@ -179,7 +179,7 @@ if (schedule.data && Utils.isScheduleFinal(schedule.data.status)) {
 - `ApiResult<T>` pattern: `{ data: T | null, error: NeuroApiError | null }`
 - `setApiToken()` / Bearer auth
 - 10s timeout default
-- WebSocket event names except the `scheduleUpdate` payload shape
+- Existing WebSocket event names remain available; v2 adds `xFeedNewEntries` and the deprecated `xFeedUpdate` alias, and changes the `scheduleUpdate` payload shape
 
 ## See also
 

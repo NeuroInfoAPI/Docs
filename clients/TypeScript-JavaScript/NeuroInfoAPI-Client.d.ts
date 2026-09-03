@@ -1,12 +1,10 @@
-type Success<T> = {
+export type ApiResult<T> = {
     data: T;
     error: null;
-};
-type Failure = {
+} | {
     data: null;
     error: NeuroApiError;
 };
-export type ApiResult<T> = Success<T> | Failure;
 export interface HttpClientOptions {
     baseURL?: string;
     timeout?: number;
@@ -16,6 +14,7 @@ export interface HttpRequestOptions {
     query?: Record<string, unknown>;
     headers?: Record<string, string>;
     method?: string;
+    signal?: AbortSignal;
 }
 export declare class HttpRequestError extends Error {
     status?: number | undefined;
@@ -26,11 +25,10 @@ export declare class HttpRequestError extends Error {
  * Lightweight fetch wrapper with configurable defaults.
  */
 export declare class HttpClient {
-    private baseURL;
-    private timeout;
-    private defaultHeaders;
+    private readonly config;
     constructor(options?: HttpClientOptions);
-    static create(options: HttpClientOptions): HttpClient;
+    /** @deprecated Use `new HttpClient(options)` instead. */
+    static create(options?: HttpClientOptions): HttpClient;
     request<T>(url: string, options?: HttpRequestOptions): Promise<T>;
     private buildUrl;
 }
@@ -60,7 +58,6 @@ export declare class NeuroApiError extends Error {
 export declare class NeuroInfoApiClient {
     apiInstance: HttpClient;
     private apiToken;
-    private baseUrl;
     /**
      * Creates a new API client instance.
      * @param token - Optional authentication token
@@ -79,7 +76,7 @@ export declare class NeuroInfoApiClient {
      * Fetches the current stream data.
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#current-stream-status-1
      */
-    getCurrentStream: () => Promise<ApiResult<TwitchStreamData>>;
+    getCurrentStream: () => Promise<ApiResult<TwitchStreamState>>;
     /**
      * Fetches all VODs (Video on Demand).
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#all-vods-1
@@ -147,13 +144,8 @@ export declare class NeuroInfoApiClient {
  * @deprecated The WebSocket client provides a more efficient and real-time way to receive updates. Consider using NeuroInfoApiWebsocketClient instead for new implementations.
  */
 export declare class NeuroInfoApiEventer {
-    private client;
-    private eventListeners;
-    private errorHandlers;
-    private cached;
-    private fetchTimeout;
-    private isProcessing;
-    private _fetchInterval;
+    private readonly client;
+    private readonly events;
     /** Interval in milliseconds between event fetches. Default is 60000 (60 seconds). Minimum is 10000 (10 seconds). */
     get fetchInterval(): number;
     set fetchInterval(value: number);
@@ -216,42 +208,34 @@ export declare class NeuroInfoApiEventer {
  * REST API before connecting, so the token is never exposed in URL query parameters.
  */
 export declare class NeuroInfoApiWebsocketClient {
-    private websocket;
-    private token;
-    private baseUrl;
-    private apiBaseUrl;
-    private authMethod;
-    private sessionId;
-    private eventListeners;
-    private systemListeners;
-    private subscribedEvents;
-    private pendingSubscriptions;
-    private reconnectAttempts;
-    private reconnectTimeout;
-    private isIntentionallyClosed;
-    private heartbeatIntervalHandle;
-    private heartbeatTimeoutHandle;
-    private pendingHeartbeat;
+    private connection;
+    private readonly auth;
+    private readonly urls;
+    private readonly listeners;
+    private readonly reconnect;
+    private readonly lifecycle;
+    private readonly settings;
     /** Whether to automatically reconnect on disconnect. Default is true. */
-    autoReconnect: boolean;
+    get autoReconnect(): boolean;
+    set autoReconnect(value: boolean);
     /** Whether to automatically send heartbeat pings while connected. Default is true. */
-    autoHeartbeat: boolean;
-    private _maxReconnectAttempts;
+    get autoHeartbeat(): boolean;
+    set autoHeartbeat(value: boolean);
     /** Maximum number of reconnect attempts. Default is 10. Set to 0 for unlimited. */
     get maxReconnectAttempts(): number;
     set maxReconnectAttempts(value: number);
-    private _reconnectBaseDelay;
     /** Base delay in milliseconds for reconnection backoff. Default is 1000ms. */
     get reconnectBaseDelay(): number;
     set reconnectBaseDelay(value: number);
-    private _heartbeatIntervalMs;
     /** Interval in milliseconds for heartbeat pings. Default is 30000ms. Minimum is 5000ms. */
     get heartbeatIntervalMs(): number;
     set heartbeatIntervalMs(value: number);
-    private _heartbeatTimeoutMs;
     /** Timeout in milliseconds waiting for a heartbeat pong. Default is 10000ms. Minimum is 1000ms. */
     get heartbeatTimeoutMs(): number;
     set heartbeatTimeoutMs(value: number);
+    /** Timeout in milliseconds for ticket fetching and the WebSocket welcome. Default is 15000ms. Minimum is 1000ms. */
+    get connectTimeoutMs(): number;
+    set connectTimeoutMs(value: number);
     /**
      * Creates a new WebSocket client instance.
      * @param token - Authentication token (required for connection)
@@ -266,12 +250,17 @@ export declare class NeuroInfoApiWebsocketClient {
     getSessionId(): string | null;
     /** Updates the authentication token. Reconnects if currently connected. */
     setToken(token: string): void;
+    /** Alias matching the HTTP client token setter. */
+    setApiToken(token: string): void;
     /**
      * Connects to the WebSocket server.
      * Uses the configured `authMethod` to authenticate.
      * @returns Promise that resolves when connected, rejects on error.
      */
     connect(): Promise<void>;
+    /** Starts either a user-requested or automatic reconnect attempt. */
+    private connectWithContext;
+    private connectInternal;
     /** Fetches a one-time connection ticket from the API */
     private fetchTicket;
     /** Internal: Connect to WebSocket with the given URL and optional headers */
@@ -284,11 +273,17 @@ export declare class NeuroInfoApiWebsocketClient {
     private scheduleReconnect;
     private clearReconnectTimeout;
     private startHeartbeat;
+    private scheduleHeartbeatInterval;
     private stopHeartbeat;
     private sendHeartbeatPing;
+    private scheduleHeartbeatTimeout;
     private acknowledgeHeartbeat;
     private sendPing;
     private resubscribeEvents;
+    /** Reconciles one event's server-side subscription with its current listeners. */
+    private syncSubscription;
+    /** Deletes a local subscription only after the server is known not to hold it. */
+    private removeInactiveSubscription;
     private sendSubscribe;
     private sendUnsubscribe;
     private send;
@@ -324,19 +319,18 @@ export declare namespace Utils {
     function isScheduleEntryUnknown(entry: ScheduleEntry): boolean;
     function hasScheduleImage(entry: ScheduleData): boolean;
 }
-/**
- * Options for the NeuroInfoApiWebsocketClient.
- */
-export interface NeuroInfoApiWebsocketClientOptions {
-    /**
-     * WebSocket server URL. Defaults to `wss://neuro.appstun.net/api/<apiVer>/ws`.
-     */
-    baseUrl?: string;
-    /**
-     * REST API base URL for ticket fetching. If not provided, automatically derived from baseUrl.
-     * Example: `https://neuro.appstun.net/api/v2`
-     */
+export interface NeuroInfoApiBaseOptions {
+    /** Host and API path without protocol. HTTP(S)/WS(S) protocols are accepted temporarily for compatibility and will be removed in a future major version. Default: `neuro.appstun.net/api/v2`. */
     apiBaseUrl?: string;
+    /** Use HTTPS/WSS instead of HTTP/WS. Default: `true`. */
+    useTls?: boolean;
+}
+/** Options for the NeuroInfoApiWebsocketClient. */
+export interface NeuroInfoApiWebsocketClientOptions extends NeuroInfoApiBaseOptions, Partial<WsClientSettings> {
+    /** Full WebSocket URL override. By default it is derived from `apiBaseUrl` and `useTls`. */
+    websocketUrl?: string;
+    /** @deprecated Use `websocketUrl`, or `apiBaseUrl` with `useTls`, instead. */
+    baseUrl?: string;
     /**
      * Authentication method to use when connecting.
      * - `"ticket"` *(default)*: Fetches a one-time ticket via REST API before connecting.
@@ -344,26 +338,14 @@ export interface NeuroInfoApiWebsocketClientOptions {
      * - `"header"`: Sends the token via `Authorization: Bearer` header during the WebSocket handshake.
      *   Only works in environments that support custom WebSocket headers (e.g., Node.js with the `ws` library).
      *   **Not supported in browsers.**
-     */
+    */
     authMethod?: "ticket" | "header";
-    /**
-     * Enable client-side ping/pong heartbeat.
-     * Default: `true`
-     */
-    autoHeartbeat?: boolean;
-    /**
-     * Heartbeat ping interval in milliseconds.
-     * Default: `30000` (minimum `5000`).
-     */
-    heartbeatIntervalMs?: number;
-    /**
-     * Heartbeat pong timeout in milliseconds.
-     * Default: `10000` (minimum `1000`).
-     */
-    heartbeatTimeoutMs?: number;
 }
-export interface NeuroInfoApiClientOptions {
+export interface NeuroInfoApiClientOptions extends NeuroInfoApiBaseOptions {
+    /** @deprecated Use `apiBaseUrl` with `useTls` instead. */
     baseUrl?: string;
+    /** HTTP request timeout in milliseconds. Default: `10000`. */
+    requestTimeoutMs?: number;
 }
 /** WebSocket event types available for subscription. */
 export type WsEventType = keyof WsEventDataMap;
@@ -476,8 +458,6 @@ export interface XFeedNewEntriesData {
     user: XFeedAccount;
     entries: XFeedEntry[];
 }
-/** @deprecated Use XFeedNewEntriesData and xFeedNewEntries instead. */
-export type XFeedUpdateData = XFeedNewEntriesData;
 /** Event data for subathonGoalUpdate event. */
 export interface WsSubathonGoalUpdateData {
     year: number;
@@ -502,72 +482,50 @@ export interface WsEventDataMap {
     subathonGoalUpdate: WsSubathonGoalUpdateData;
 }
 type WsEmptyData = Record<string, never>;
-interface WsEventSelection {
+type WsMessage<Type extends string, Data = WsEmptyData> = {
+    type: Type;
+    data: Data;
+};
+type WsEventSelection = {
     eventType: WsEventType;
-}
-interface WsWelcomeMessage {
-    type: "welcome";
-    data: {
-        sessionId: string;
-    };
-}
-interface WsAuthSuccessMessage {
-    type: "authSuccess";
-    data: WsEmptyData;
-}
-interface WsInvalidMessage {
-    type: "invalid";
-    data: {
-        reason: WsInvalidReason;
-        message?: string;
-    };
-}
-interface WsAddSuccessMessage {
-    type: "addSuccess";
-    data: WsEventSelection & {
-        subscribed: boolean;
-    };
-}
-interface WsRemoveSuccessMessage {
-    type: "removeSuccess";
-    data: WsEventSelection & {
-        unsubscribed: boolean;
-    };
-}
-interface WsListEventsMessage {
-    type: "listEvents";
-    data: {
-        subscribedEvents: WsEventType[];
-        availableEvents: WsEventType[];
-    };
-}
-interface WsPongMessage {
-    type: "pong";
-    data: WsEmptyData;
-}
-interface WsEventMessage<T extends WsEventType = WsEventType> {
-    type: "event";
-    data: {
-        eventType: T;
-        eventData: WsEventDataMap[T];
+};
+type WsWelcomeMessage = WsMessage<"welcome", {
+    sessionId: string;
+}>;
+type WsAuthSuccessMessage = WsMessage<"authSuccess">;
+type WsInvalidMessage = WsMessage<"invalid", {
+    reason: WsInvalidReason;
+    message?: string;
+}>;
+type WsAddSuccessMessage = WsMessage<"addSuccess", WsEventSelection & {
+    subscribed: boolean;
+}>;
+type WsRemoveSuccessMessage = WsMessage<"removeSuccess", WsEventSelection & {
+    unsubscribed: boolean;
+}>;
+type WsListEventsMessage = WsMessage<"listEvents", {
+    subscribedEvents: WsEventType[];
+    availableEvents: WsEventType[];
+}>;
+type WsPongMessage = WsMessage<"pong">;
+type WsEventMessage<T extends WsEventType = WsEventType> = {
+    [EventType in T]: WsMessage<"event", {
+        eventType: EventType;
+        eventData: WsEventDataMap[EventType];
         timestamp: number;
-    };
-}
+    }>;
+}[T];
 export type WsServerMessage = WsWelcomeMessage | WsAuthSuccessMessage | WsInvalidMessage | WsAddSuccessMessage | WsRemoveSuccessMessage | WsListEventsMessage | WsPongMessage | WsEventMessage;
-export interface ApiClientEvents {
-    streamOnline: TwitchStreamData;
-    streamOffline: TwitchStreamData;
-    streamUpdate: TwitchStreamData;
-    scheduleUpdate: LatestScheduleData;
-    subathonUpdate: SubathonData;
-    subathonGoalUpdate: {
-        subathon: SubathonData;
-        goal: SubathonGoal;
-        goalNumber: number;
-    };
-}
-export type ApiClientEvent = keyof ApiClientEvents;
-export type ApiClientEventCallback<T extends ApiClientEvent> = (data: ApiClientEvents[T]) => void;
+type WsClientSettings = {
+    autoReconnect: boolean;
+    autoHeartbeat: boolean;
+    maxReconnectAttempts: number;
+    reconnectBaseDelay: number;
+    heartbeatIntervalMs: number;
+    heartbeatTimeoutMs: number;
+    connectTimeoutMs: number;
+};
+/** Base stream shape kept for backwards-compatible access to live-only optional fields. */
 export interface TwitchStreamData extends Partial<StreamMetadata> {
     isLive: boolean;
     id?: string;
@@ -576,6 +534,8 @@ export interface TwitchStreamData extends Partial<StreamMetadata> {
     startedAt?: number;
     thumbnailUrl?: string;
 }
+/** Current stream state. `isLive` narrows all live-only fields to required values. */
+export type TwitchStreamState = TwitchStreamData & (WsStreamOnlineData | WsStreamOfflineData);
 export interface TwitchVod {
     id: string;
     streamId: string;
@@ -649,6 +609,25 @@ export interface SubathonGoal {
     completed: boolean;
     reached: boolean;
 }
+/** @deprecated Only used by the deprecated `NeuroInfoApiEventer`. Use `TwitchStreamState` or the WebSocket event types instead. */
+export type EventerStreamData = TwitchStreamData;
+/** @deprecated Event map used only by the deprecated `NeuroInfoApiEventer`. Use `WsEventDataMap` with `NeuroInfoApiWebsocketClient` instead. */
+export interface ApiClientEvents {
+    streamOnline: EventerStreamData;
+    streamOffline: EventerStreamData;
+    streamUpdate: EventerStreamData;
+    scheduleUpdate: LatestScheduleData;
+    subathonUpdate: SubathonData;
+    subathonGoalUpdate: {
+        subathon: SubathonData;
+        goal: SubathonGoal;
+        goalNumber: number;
+    };
+}
+/** @deprecated Event name used only by the deprecated `NeuroInfoApiEventer`. Use `WsEventType` instead. */
+export type ApiClientEvent = keyof ApiClientEvents;
+/** @deprecated Callback type used only by the deprecated `NeuroInfoApiEventer`. Use a WebSocket event callback instead. */
+export type ApiClientEventCallback<T extends ApiClientEvent> = (data: ApiClientEvents[T]) => void;
 /** @deprecated Use `Utils.isScheduleFinal` instead. */
 export declare const isScheduleFinal: typeof Utils.isScheduleFinal;
 /** @deprecated Use `StreamMetadata` instead. */
@@ -663,4 +642,6 @@ export type ScheduleLatestResponse = LatestScheduleData;
 export type WsScheduleUpdateData = ScheduleData;
 /** @deprecated Use `SubathonData` instead. */
 export type WsSubathonUpdateData = SubathonData;
+/** @deprecated Use XFeedNewEntriesData and xFeedNewEntries instead. */
+export type XFeedUpdateData = XFeedNewEntriesData;
 export {};
