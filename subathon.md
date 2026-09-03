@@ -22,7 +22,7 @@
 
 ## Description
 
-Access subathon data and goal information. The current subathon endpoint is publicly available with generous rate limiting, the years endpoint returns year-to-name mappings, and specific year data requires authentication.
+Access subathon data and goal information. The current subathon endpoint is publicly available with the default anonymous v2 rate limit, the years endpoint returns year-to-name mappings, and specific year data requires authentication.
 
 ## Endpoints Details
 

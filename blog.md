@@ -122,4 +122,4 @@ Authorization: Bearer YOUR_API_TOKEN
 - `rawContent` is the decoded HTML from the feed entry before it is transformed into parsed sections
 - The blog feed is cached and refreshed every 15 minutes on the server
 - `content[x].body` can contain Discord markdown formatting
-- This endpoint requires authentication and is rate-limited to `16/min` per API token
+- This endpoint requires authentication and is rate-limited to `16/min` per authenticated Twitch account

@@ -30,7 +30,7 @@
 ## X Feed API
 
 - **`GET /api/v2/x-feed`** - Get the cached X feed for a supported account
-  - Parameters: `user` (required query parameter: `NeurosamaAI`, `EvilNeuroAI`, or `Vedal987`), `raw` (optional query parameter)
+  - Parameters: `user` (required query parameter: `NeurosamaAI`, `EvilNeuroAI`, or `Vedal987`)
 
 ## WebSocket API
 

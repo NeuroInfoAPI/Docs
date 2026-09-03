@@ -34,7 +34,7 @@ Access Twitch stream data and VOD information. Stream data is publicly available
 
 #### Description
 
-Get current Twitch stream information. This is a public endpoint with generous rate limiting.
+Get current Twitch stream information. This is a public endpoint with the default anonymous v2 rate limit.
 
 #### Parameters
 
@@ -249,7 +249,7 @@ Authorization: Bearer YOUR_API_TOKEN
 
 ## Other Notes
 
-- Stream data is cached for 10 seconds
+- Stream responses use `Cache-Control: public, max-age=5`; the underlying stream state is normally refreshed every 10 seconds
 - VOD data is cached for 15 minutes (all VODs) to 1 hour (specific VOD)
 - All Twitch endpoints have rate limiting applied; VOD endpoints require valid API authentication
 

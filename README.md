@@ -14,7 +14,7 @@ Welcome to the **NeuroInfoApi** documentation repository! This API provides comp
 
 This repository contains documentation for all public API areas:
 
-- **[Quick Reference](quickInfo.md)** - Quick overview of all endpoints
+- **[Quick Reference](quickInfo.md)** - Quick overview of all documented public endpoints
 - **[Authentication Guide](needsAuth.md)** - Endpoints requiring API tokens
 - **[Error Documentation](errors.md)** - Error codes and troubleshooting
 - **[Schedule API](schedule.md)** - Weekly stream schedules
@@ -84,17 +84,17 @@ This repository contains documentation for all public API areas:
 - **WebSocket URL**: `wss://neuro.appstun.net/api/v2/ws`
 - **WebSocket Ticket URL**: `https://neuro.appstun.net/api/v2/ws/ticket`
 - **HTTP Methods**: GET only
-- **Response Format**: JSON — v2 REST success always includes `{"data": ...}` and may include endpoint-specific metadata; v2 REST errors use `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}`
-- **Content-Type**: `application/json`
+- **Response Format**: JSON endpoints in v2 wrap REST success as `{"data": ...}` and use `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}` for errors. The `/schedule/image` redirect intentionally has no JSON envelope.
+- **Content-Type**: `application/json` for JSON REST endpoints
 - **Authentication**: Bearer token in Authorization header
 
 ## ⚡ Rate Limiting
 
 - **Default public/anonymous v2 endpoints**: 30 requests per minute
-- **Authenticated v2 endpoints**: 100 requests per minute per API token
+- **Authenticated v2 endpoints**: 100 requests per minute per authenticated Twitch account
 - **Generous endpoints**: 300 requests per minute where explicitly documented (for example `GET /api/info`)
 - **Endpoint-specific limits**: Some routes have stricter limits, such as schedule search (`6/min` plus `2/10s`), blog feed (`16/min`), and X feed (`16/min`)
-- Rate limits are applied per API token when authenticated, otherwise per client IP
+- Rate limits are shared by all API tokens belonging to the same authenticated Twitch account; anonymous limits are applied per client IP
 
 ## 📝 Notes
 
@@ -102,7 +102,7 @@ This repository contains documentation for all public API areas:
 - Data is cached for optimal performance
 - Manual updates may cause slight delays in data availability
 - The API uses calendar week numbers (ISO 8601 standard)
-- All v2 REST success responses include `{"data": ...}` and may include documented metadata; all v2 REST error responses follow `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}`
+- All JSON-producing v2 REST success responses include `{"data": ...}` and may include documented metadata; their errors follow `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}`. The `/schedule/image` redirect is the documented non-JSON exception.
 
 <br>
 

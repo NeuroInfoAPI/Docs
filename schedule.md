@@ -196,11 +196,11 @@ Searches schedule messages (for example: "karaoke", "offline", or game names) an
 | `limit`      | integer | No       | Number of results per page (`1-100`, effective max currently `25`). Default is `25`. |
 | `sort`       | string  | No       | Sort order by `year/week`: `asc` or `desc` (default: `desc`).                        |
 | `type`       | string  | No       | Filter by schedule day type: `normal`, `offline`, `canceled`, `TBD`, `unknown`.      |
-| `cursorYear` | integer | No       | Cursor year from previous response `nextCursor.year` (must be used with week).       |
+| `cursorYear` | integer | No       | Cursor year from previous response `nextCursor.year` (`>= 2023`, not in the future, and used with week). |
 | `cursorWeek` | integer | No       | Cursor week from previous response `nextCursor.week` (must be used with year).       |
 
 > [!NOTE]
-> This endpoint uses two limiters: `6 requests / minute` and `2 requests / 10 seconds` per token.
+> This endpoint uses two limiters: `6 requests / minute` and `2 requests / 10 seconds` per authenticated Twitch account.
 
 #### Request Examples
 
@@ -485,9 +485,9 @@ GET https://neuro.appstun.net/api/v2/schedule/weeks
 - Search endpoint requires authentication and uses `6/min` + `2/10s` rate limits
 - If only `week` is provided without `year`, the current year is used
 - Valid years range from 2023 to the current year
-- Specific week schedules are cached for 30 minutes
+- Specific week responses use `Cache-Control: private, max-age=300` (5 minutes)
 - Latest schedule is cached for 1 minute
-- Search responses are cached for 30 seconds
+- Search responses use `Cache-Control: private, max-age=60` (1 minute)
 - `/schedule/weeks` is public and returns available week numbers grouped by year
-- Schedule data is globally cached for a minimum of 6 hours, so changed schedules are not immediately available
+- Schedule records use a one-hour sliding server-side cache; updates made through the server invalidate the affected cache entries
 - Messages of schedule day can include Discord markdowns

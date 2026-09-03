@@ -45,7 +45,7 @@ Most v1 endpoints returned the payload directly:
 
 ### v2
 
-Every successful REST response is wrapped:
+Every successful JSON REST response is wrapped. The non-JSON `GET /schedule/image` endpoint remains a redirect:
 
 ```json
 {
@@ -115,7 +115,7 @@ Schedule search results in v2 also use `status` instead of `isFinal`.
 
 |                  | v1                                 | v2                          |
 | ---------------- | ---------------------------------- | --------------------------- |
-| Default response | Array of years: `["2023", "2024"]` | Object mapping year -> name |
+| Default response | Array of years: `[2023, 2024]` | Object mapping year -> name |
 | `?detailed`      | Required for year-to-name mapping  | Removed                     |
 
 If you relied on the plain year list, use `Object.keys(json.data)` on the v2 response.
@@ -127,7 +127,7 @@ If you relied on the plain year list, use `Object.keys(json.data)` on the v2 res
 | Path        | `/blog/feed`          | `/blog`               |
 | Server body | `{ "data": { ... } }` | `{ "data": { ... } }` |
 
-The main change is the path and the consistent outer envelope across all endpoints.
+The main change is the path and the consistent outer envelope across JSON endpoints.
 
 ## WebSocket
 
@@ -137,7 +137,7 @@ The main change is the path and the consistent outer envelope across all endpoin
 | Ticket flow              | `GET /api/ws/ticket` -> connect with `?ticket=...` | `GET /api/v2/ws/ticket` -> connect with `?ticket=...` |
 | `scheduleUpdate` payload | includes `isFinal: boolean`                        | includes `status: ScheduleStatus`                     |
 
-Event types are otherwise the same.
+The existing event types remain available. v2 additionally exposes `xFeedNewEntries` and its deprecated compatibility alias `xFeedUpdate`; neither X-feed event is available on the v1 socket.
 
 ## v1 deprecation signals
 
@@ -176,8 +176,8 @@ The TypeScript/JavaScript client is v2 too, unwraps `{ data: ... }` automaticall
 - Authentication: `Authorization: Bearer YOUR_API_TOKEN`
 - HTTP methods: GET only on public API routes
 - Timestamp format: Unix milliseconds
-- Error codes: same `AP*`, `SC*`, `VD*`, etc.
-- Payload field names inside resources except `isFinal` -> `status`
+- Error-code families remain available, while v2 query validation commonly uses `AP4` instead of a route-specific v1 validation code
+- Most payload field names inside resources remain unchanged; schedules replace `isFinal` with `status` and add `imageUrl`
 
 ## Further reading
 

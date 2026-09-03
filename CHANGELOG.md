@@ -3,6 +3,26 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [03.09.2026]
+
+__Big [NeuroInfoAPI-JS/TS-Client](clients/TypeScript-JavaScript/) Update (internally)__
+
+### Added
+
+- Added shared `apiBaseUrl` and `useTls` options, configurable request/connection timeouts, and a WebSocket `setApiToken()` alias.
+
+### Changed
+
+- Added the precise `TwitchStreamState` online/offline union while keeping `TwitchStreamData` compatible, and deprecated the transport-specific `baseUrl` options, protocols in `apiBaseUrl`, and `HttpClient.create()` factory in favor of the shared base settings, `websocketUrl`, and `new HttpClient()`.
+- Clarified that the public documentation and TypeScript/JavaScript client cover their documented, supported endpoint sets rather than every internal server endpoint.
+
+### Fixed
+
+- Improved polling listener cleanup and WebSocket connection, reconnect, heartbeat, subscription, and lifecycle stability.
+- Fixed ticket endpoint derivation and query handling for custom WebSocket URLs.
+- Aligned schedule validation, rate-limit scope and error codes, cache durations, and the X-feed parameter list with the server contract.
+- Corrected v1 subathon-year and WebSocket migration notes, documented all current WebSocket handshake failures and limits, and clarified the non-JSON schedule-image exception.
+
 ## [02.09.2026]
 
 ### Added

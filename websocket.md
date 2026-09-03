@@ -57,7 +57,7 @@ Authorization: Bearer YOUR_API_TOKEN
   "data": {
     "ticket": "f8c8e16a...",
     "expiresIn": 30,
-    "usage": "Connect with wss://neuro.appstun.net/api/v2/ws?ticket=<ticket>"
+    "usage": "Connect with wss://neuro.appstun.net/api/v2/ws?ticket=<ticket> (recommended) or wss://neuro.appstun.net/api/ws?ticket=<ticket> (v1, deprecated)"
   }
 }
 ```
@@ -372,9 +372,12 @@ Handshake errors return plain text responses (not JSON):
 
 - `404 Not Found` (invalid WebSocket path)
 - `401 Missing authentication (ticket or token required)`
+- `401 Invalid token format`
 - `401 Invalid or expired ticket`
 - `401 Invalid or expired token`
-- `429 Connection limit reached (max 5)`
+- `429 Too many connection attempts` (more than 20 attempts per IP in 10 seconds)
+- `429 Connection limit reached (max 5)` (`max 20` for an unlimited token)
+- `503 Server is at connection capacity`
 - `500 Authentication error`
 - `500 Upgrade failed`
 
@@ -390,12 +393,15 @@ Handshake errors return plain text responses (not JSON):
 }
 ```
 
-Possible `reason` values:
+The current v2 message protocol emits these `reason` values:
 
 - `malformed`
-- `unauthenticated`
 - `missingEventtype`
 - `invalidEventtype`
+
+The following values are retained in the protocol types for legacy compatibility but are not emitted after the authenticated v2 handshake:
+
+- `unauthenticated`
 - `missingToken`
 - `invalidToken`
 - `authError`
@@ -403,7 +409,8 @@ Possible `reason` values:
 ## Other Notes
 
 - Ticket validity is 30 seconds and each ticket is one-time use
-- Maximum 5 active WebSocket connections per user (unlimited tokens excluded)
+- Maximum 5 active WebSocket connections per user; unlimited tokens have a separate limit of 20
+- The server accepts at most 20 WebSocket connection attempts per IP in 10 seconds and has a total capacity of 1500 active connections
 - `streamUpdate` events are throttled to at most one broadcast every 2 seconds
 - `blogFeedUpdate` broadcasts only changed or newly added entries
 - `xFeedNewEntries` broadcasts only entries newer than the newest previously seen entry for each supported X account

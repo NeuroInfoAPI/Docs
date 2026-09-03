@@ -4,7 +4,7 @@
 
 ## Response Format
 
-v2 error responses follow a consistent JSON format. Success responses always include `{ "data": ... }`; endpoints may include documented metadata alongside it. The payload inside `data` differs by endpoint and is shown in each endpoint's documentation.
+JSON-producing v2 endpoints use a consistent response format. Their success responses include `{ "data": ... }`; endpoints may include documented metadata alongside it. The payload inside `data` differs by endpoint and is shown in each endpoint's documentation. The `/schedule/image` redirect is intentionally non-JSON.
 
 **Success Response (example):**
 
@@ -20,7 +20,7 @@ v2 error responses follow a consistent JSON format. Success responses always inc
 
 **Error Response:**
 
-All REST errors use the same envelope. `timestamp` is a Unix epoch in milliseconds; `path` is the request path without query parameters.
+Errors from JSON-producing v2 REST endpoints use the same envelope. `timestamp` is a Unix epoch in milliseconds; `path` is the request path without query parameters. A missing `/schedule/image` returns an empty `404` response instead.
 
 ```json
 {
@@ -110,7 +110,7 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 | ----- | ----------------- | ------------------ |
 | `BL1` | `Blog_NoBlogData` | No blog data found |
 
-### X Feed Errors (NF)
+### X Feed Errors (XF)
 
 | Code  | Error               | Description                          |
 | ----- | ------------------- | ------------------------------------ |
@@ -214,9 +214,12 @@ The WebSocket API uses two different error formats:
 
 - `404 Not Found` (invalid WebSocket path)
 - `401 Missing authentication (ticket or token required)`
+- `401 Invalid token format`
 - `401 Invalid or expired ticket`
 - `401 Invalid or expired token`
-- `429 Connection limit reached (max 5)`
+- `429 Too many connection attempts`
+- `429 Connection limit reached (max 5)` (`max 20` for an unlimited token)
+- `503 Server is at connection capacity`
 - `500 Authentication error`
 - `500 Upgrade failed`
 

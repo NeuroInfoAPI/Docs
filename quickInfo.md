@@ -136,7 +136,7 @@ _Full docs of endpoint: [x-feed.md](x-feed.md)_
 - **Purpose**: Cached X posts, replies, and retweets for a supported account
 - **Parameters**: `user` (required query parameter: `NeurosamaAI`, `EvilNeuroAI`, or `Vedal987`)
 - **Public**: No (Auth required)
-- **Rate limit**: `16/min` per API token
+- **Rate limit**: `16/min` per authenticated Twitch account
 - **Cache**: `120` seconds
 - **Example**: `/x-feed?user=NeurosamaAI`
 
