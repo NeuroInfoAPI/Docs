@@ -139,10 +139,6 @@ When the parent status is included in the FxTwitter response, replies also conta
 
 ## Notes
 
-- The server refreshes the latest 20 entries every minute.
-- Failed source requests retain the last successfully cached feed.
-- HTTP responses use `Cache-Control: private, max-age=120`.
-- The endpoint requires authentication and is rate-limited to `16/min` per authenticated Twitch account.
-- Missing or unsupported `user` values return the general `AP4` invalid-query error.
+- The server tries to refresh the entries (up to 100) per account every minute. The API returns these entries.
 - `xFeedNewEntries` contains the account name and only newly published entries; see [websocket.md](websocket.md#x-feed-new-entries-event).
 - The deprecated `xFeedUpdate` event is emitted with the same payload for backwards compatibility.

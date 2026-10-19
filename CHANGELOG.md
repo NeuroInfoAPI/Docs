@@ -3,6 +3,12 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [19.10.2026]
+
+### Changed
+
+- Updated x-feed notes ([x-feed.md](x-feed.md))
+
 ## [03.09.2026]
 
 __Big [NeuroInfoAPI-JS/TS-Client](clients/TypeScript-JavaScript/) Update (internally)__
