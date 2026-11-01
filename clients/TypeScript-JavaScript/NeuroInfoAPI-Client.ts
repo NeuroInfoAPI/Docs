@@ -85,7 +85,7 @@ async function bootCheck(baseUrlOrApiBase: string, clientApiVer: string = apiVer
       }
     }
   } catch {
-    // Silently ignore — boot check is non-critical
+    // Silently ignore - boot check is non-critical
   }
 }
 

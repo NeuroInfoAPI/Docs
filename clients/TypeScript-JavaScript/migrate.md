@@ -1,16 +1,16 @@
 **⤴️ Back to the [TypeScript/JavaScript Client README](README.md)** · [Full API migration guide](../../migrate.md)
 
-# TypeScript/JavaScript Client — v1 to v2 Migration
+# TypeScript/JavaScript Client - v1 to v2 Migration
 
 > [!IMPORTANT]
-> New client versions default to `https://neuro.appstun.net/api/v2`. v1 (`/api/v1`) is deprecated and will be turned off on **2026-11-01**.
+> New client versions default to `https://neuro.appstun.net/api/v2`. v1 (`/api/v1`) was turned off on **2026-11-01** and returns `410 Gone`.
 
 This guide covers changes in `NeuroInfoAPI-Client.ts` / `.js` when upgrading from the v1-default client to the v2-default client. For raw HTTP migration (envelopes, endpoint renames), see the [full API migration guide](../../migrate.md).
 
 ## Quick checklist
 
 1. Update to the latest client files or `neuroinfoapi-client` npm package.
-2. Remove manual `baseUrl: ".../api/v1"` unless you intentionally stay on v1 during transition.
+2. Replace manual `baseUrl: ".../api/v1"` overrides with `.../api/v2`.
 3. Replace `schedule.isFinal` checks with `status` or `isScheduleFinal(status)`.
 4. Update `getVod` call sites: parameter renamed from `streamId` to `id`.
 5. Update `getSchedule` call sites: argument order is now `(week, year?)`.
@@ -31,7 +31,7 @@ This guide covers changes in `NeuroInfoAPI-Client.ts` / `.js` when upgrading fro
 
 ## `request()` and `ApiResult<T>`
 
-The client still returns `{ data, error }` — that is the client result type, not the HTTP envelope.
+The client still returns `{ data, error }` - that is the client result type, not the HTTP envelope.
 
 ### v1 behavior
 

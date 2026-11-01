@@ -290,7 +290,7 @@ Returns the timestamps where a devstream happened.
 
 #### Authentication
 
-**Not required** – This is a public endpoint.
+**Not required** - This is a public endpoint.
 
 #### Parameters
 

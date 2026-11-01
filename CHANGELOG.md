@@ -3,6 +3,13 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [01.11.2026]
+
+### Removed
+
+- Turned off API v1 REST endpoints and the legacy `/api/ws` WebSocket, including `/api/ws/ticket`. They now return HTTP `410 Gone` (`AP5`) with a migration hint.
+- `/api/info` now reports v1 as `removed`. Use `/api/v2` and `/api/v2/ws`; see the [migration guide](migrate.md).
+
 ## [19.10.2026]
 
 ### Changed
@@ -107,7 +114,7 @@ __Big [NeuroInfoAPI-JS/TS-Client](clients/TypeScript-JavaScript/) Update (intern
 - TS-Client: default REST base URL `/api/v2`; `request()` unwraps `{ data: ... }` server responses ([NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts), [NeuroInfoAPI-Client.js](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.js), [NeuroInfoAPI-Client.d.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.d.ts)).
 - TS-Client: WebSocket default URL `/api/v2/ws`; `scheduleUpdate` uses `status` ([NeuroInfoAPI-Client](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts)).
 - TS-Client: `getSchedule(week, year?)` argument order (week first); added `getDevstreamTimes()`; exported `isScheduleFinal()` helper ([NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts), [NeuroInfoAPI-Client.js](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.js), [NeuroInfoAPI-Client.d.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.d.ts)).
-- TS-Client: `BlogFeedData` typing fix — use `result.data.entries`, not `result.data.data.entries` ([NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts), [NeuroInfoAPI-Client.d.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.d.ts), [client migration guide](clients/TypeScript-JavaScript/migrate.md)).
+- TS-Client: `BlogFeedData` typing fix - use `result.data.entries`, not `result.data.data.entries` ([NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts), [NeuroInfoAPI-Client.d.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.d.ts), [client migration guide](clients/TypeScript-JavaScript/migrate.md)).
 - TS-Client: `getSubathonYears()` always returns year→name map; removed `detailed` parameter ([NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts), [NeuroInfoAPI-Client.d.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.d.ts)).
 - TS-Client: `NeuroApiError` exposes optional `timestamp` and `path` from v2 error responses ([NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts), [NeuroInfoAPI-Client.d.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.d.ts)).
 - TS-Client: replaced the external `ofetch` request dependency with the built-in fetch-based `HttpClient` ([NeuroInfoAPI-Client.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.ts), [NeuroInfoAPI-Client.js](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.js), [NeuroInfoAPI-Client.d.ts](clients/TypeScript-JavaScript/NeuroInfoAPI-Client.d.ts)).

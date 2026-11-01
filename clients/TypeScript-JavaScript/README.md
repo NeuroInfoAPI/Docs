@@ -135,9 +135,9 @@ The supported account names are exported as the `XFeedAccount` type. Replies con
 
 Schedule responses include a `status` field:
 
-- `confirmed` — final, manually confirmed
-- `auto_discord` — auto-collected from the Discord schedule channel
-- `auto_twitch` — auto-collected or fetched from Twitch
+- `confirmed` - final, manually confirmed
+- `auto_discord` - auto-collected from the Discord schedule channel
+- `auto_twitch` - auto-collected or fetched from Twitch
 
 Schedule helpers are available through the exported `Utils` namespace.
 

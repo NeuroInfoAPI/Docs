@@ -68,7 +68,7 @@ async function bootCheck(baseUrlOrApiBase, clientApiVer = apiVersion) {
         }
     }
     catch {
-        // Silently ignore — boot check is non-critical
+        // Silently ignore - boot check is non-critical
     }
 }
 export class HttpRequestError extends Error {

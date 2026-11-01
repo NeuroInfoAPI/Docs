@@ -3,7 +3,7 @@
 # Migrating from API v1 to v2
 
 > [!IMPORTANT]
-> **v1 will be turned off on 2026-11-01.** Migrate to `/api/v2/` before that date.  
+> **v1 was turned off on 2026-11-01.** Requests to `/api/v1`, `/api/ws`, and `/api/ws/ticket` now return `410 Gone`. Migrate to `/api/v2/`.<br>
 > Check `GET https://neuro.appstun.net/api/info` for the latest version status and sunset date.
 
 This guide summarizes every breaking and behavioral change between v1 and v2. Use it together with the updated endpoint docs and the [TypeScript/JavaScript client migration guide](clients/TypeScript-JavaScript/migrate.md) if you use the official client.
@@ -20,7 +20,7 @@ This guide summarizes every breaking and behavioral change between v1 and v2. Us
 
 ## Base URL
 
-|              | v1 (deprecated)                     | v2 (current)                        |
+|              | v1 (removed)                     | v2 (current)                        |
 | ------------ | ----------------------------------- | ----------------------------------- |
 | REST         | `https://neuro.appstun.net/api/v1/` | `https://neuro.appstun.net/api/v2/` |
 | WebSocket    | `wss://neuro.appstun.net/api/ws`    | `wss://neuro.appstun.net/api/v2/ws` |
@@ -131,25 +131,30 @@ The main change is the path and the consistent outer envelope across JSON endpoi
 
 ## WebSocket
 
-|                          | v1 (deprecated)                                    | v2 (recommended)                                      |
+|                          | v1 (removed)                                    | v2 (recommended)                                      |
 | ------------------------ | -------------------------------------------------- | ----------------------------------------------------- |
 | URL                      | `wss://neuro.appstun.net/api/ws`                   | `wss://neuro.appstun.net/api/v2/ws`                   |
 | Ticket flow              | `GET /api/ws/ticket` -> connect with `?ticket=...` | `GET /api/v2/ws/ticket` -> connect with `?ticket=...` |
 | `scheduleUpdate` payload | includes `isFinal: boolean`                        | includes `status: ScheduleStatus`                     |
 
-The existing event types remain available. v2 additionally exposes `xFeedNewEntries` and its deprecated compatibility alias `xFeedUpdate`; neither X-feed event is available on the v1 socket.
+The existing event types remain available on v2. v2 additionally exposes `xFeedNewEntries` and its deprecated compatibility alias `xFeedUpdate`. The v1 socket is no longer available.
 
-## v1 deprecation signals
+## v1 shutdown
 
-While v1 remains available during the transition, every `/api/v1/*` response includes:
+Since **2026-11-01**, `/api/v1` and its subpaths, plus `/api/ws` and `/api/ws/ticket`, return `410 Gone` with this JSON error:
 
-| Header        | Value                                                     |
-| ------------- | --------------------------------------------------------- |
-| `Deprecation` | `true`                                                    |
-| `Sunset`      | `2026-11-01T00:00:00.000Z`                                |
-| `Link`        | `<https://neuro.appstun.net/api/docs>; rel="deprecation"` |
+```json
+{
+  "error": {
+    "code": "AP5",
+    "message": "API v1 was removed on 2026-11-01. Please migrate to /api/v2. See https://neuro.appstun.net/api/docs"
+  }
+}
+```
 
-Use `GET /api/info` for programmatic version and sunset checks.
+The v1 WebSocket handshake also returns HTTP `410` instead of upgrading. These responses include `Cache-Control: no-store` and a `Link` header pointing to the current documentation. CORS preflight requests to the REST server still return `204`.
+
+`GET /api/info` reports v1 as `status: "removed"`, retains its sunset date (`2026-11-01T00:00:00.000Z`), and reports v2 as the latest stable version.
 
 ## Raw `fetch` migration example
 

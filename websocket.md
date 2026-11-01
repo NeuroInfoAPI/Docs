@@ -4,6 +4,8 @@
 
 ## Endpoints
 
+The v1 socket `/api/ws` and its ticket endpoint `/api/ws/ticket` were removed on **2026-11-01** and return HTTP `410 Gone` (`AP5`). Use the v2 endpoints below.
+
 > [!IMPORTANT]
 > Recommended authentication flow for browser clients:
 > 1) Get one-time ticket via REST (`GET /api/v2/ws/ticket`) with Bearer token
@@ -57,7 +59,7 @@ Authorization: Bearer YOUR_API_TOKEN
   "data": {
     "ticket": "f8c8e16a...",
     "expiresIn": 30,
-    "usage": "Connect with wss://neuro.appstun.net/api/v2/ws?ticket=<ticket> (recommended) or wss://neuro.appstun.net/api/ws?ticket=<ticket> (v1, deprecated)"
+    "usage": "Connect with wss://neuro.appstun.net/api/v2/ws?ticket=<ticket>"
   }
 }
 ```

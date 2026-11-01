@@ -45,6 +45,7 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 | `AP2` | `Api_MethodNotAllowed` | Method not allowed (API tokens are GET-only) |
 | `AP3` | `Api_NotFound`         | 404 Not Found                                |
 | `AP4` | `Api_InvalidQuery`     | Invalid query parameters                     |
+| `AP5` | `Api_VersionRemoved`   | API v1 removed; HTTP `410 Gone`, migrate to v2 |
 
 ### Schedule Errors (SC)
 
