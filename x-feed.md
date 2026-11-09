@@ -4,7 +4,7 @@
 
 ## Endpoint
 
-`GET https://neuro.appstun.net/api/v2/x-feed`
+`GET https://neuroinfoapi.dev/api/v2/x-feed`
 
 ## Description
 
@@ -18,14 +18,14 @@ Tweet and reply authors always match the requested account. Retweets keep the or
 
 ## Parameters
 
-| Parameter | Location | Type   | Required | Description                                  |
-| --------- | -------- | ------ | -------- | -------------------------------------------- |
+| Parameter | Location | Type   | Required | Description                                 |
+| --------- | -------- | ------ | -------- | ------------------------------------------- |
 | `user`    | Query    | string | Yes      | `NeurosamaAI`, `EvilNeuroAI`, or `Vedal987` |
 
 ## Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/x-feed?user=NeurosamaAI
+GET https://neuroinfoapi.dev/api/v2/x-feed?user=NeurosamaAI
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -62,17 +62,17 @@ Authorization: Bearer YOUR_API_TOKEN
 
 ## Entry Properties
 
-| Property           | Type                           | Description                                                    |
-| ------------------ | ------------------------------ | -------------------------------------------------------------- |
-| `id`               | string                         | Exact X post ID, kept as a string to avoid integer loss.       |
-| `type`             | `tweet`, `reply`, or `retweet` | Entry type.                                                    |
+| Property           | Type                           | Description                                                           |
+| ------------------ | ------------------------------ | --------------------------------------------------------------------- |
+| `id`               | string                         | Exact X post ID, kept as a string to avoid integer loss.              |
+| `type`             | `tweet`, `reply`, or `retweet` | Entry type.                                                           |
 | `replyTo`          | object                         | Reply target with `username`, `statusId`, `url`, and optional `post`. |
-| `retweetedBy`      | object                         | Account that reposted the entry; only included for retweets.   |
-| `author`           | object                         | Original entry author with `username`.                         |
-| `url`              | string                         | Direct X post URL.                                             |
-| `createdTimestamp` | number                         | Creation time as a Unix timestamp in milliseconds.             |
-| `content`          | string                         | Plain-text post content.                                       |
-| `media`            | object[]                       | Structured image and video attachments using public CDN URLs. |
+| `retweetedBy`      | object                         | Account that reposted the entry; only included for retweets.          |
+| `author`           | object                         | Original entry author with `username`.                                |
+| `url`              | string                         | Direct X post URL.                                                    |
+| `createdTimestamp` | number                         | Creation time as a Unix timestamp in milliseconds.                    |
+| `content`          | string                         | Plain-text post content.                                              |
+| `media`            | object[]                       | Structured image and video attachments using public CDN URLs.         |
 
 Image attachment:
 
@@ -100,12 +100,12 @@ Video attachment:
 
 When the parent status is included in the FxTwitter response, replies also contain it under `replyTo.post`:
 
-| Property           | Type     | Description                                      |
-| ------------------ | -------- | ------------------------------------------------ |
-| `id`               | string   | Exact ID of the parent X post.                   |
-| `content`          | string   | Plain-text parent post content.                  |
+| Property           | Type     | Description                                     |
+| ------------------ | -------- | ----------------------------------------------- |
+| `id`               | string   | Exact ID of the parent X post.                  |
+| `content`          | string   | Plain-text parent post content.                 |
 | `createdTimestamp` | number   | Parent post creation time in Unix milliseconds. |
-| `media`            | object[] | Parent post image and video attachments.         |
+| `media`            | object[] | Parent post image and video attachments.        |
 
 `replyTo.post` is optional because deleted, private, or otherwise unavailable parent posts may not be returned by the source.
 

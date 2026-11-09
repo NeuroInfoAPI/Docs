@@ -4,7 +4,7 @@
 
 > [!IMPORTANT]
 > Authentication is done via a Authorization Header: `Authorization: Bearer YOUR_API_TOKEN`<br>
-> To generate an API token, visit the [API Dashboard](https://neuro.appstun.net/api/dash/). Log in with your Twitch account and click the `Generate API Token` button.
+> To generate an API token, visit the [API Dashboard](https://neuroinfoapi.dev/api/dash/). Log in with your Twitch account and click the `Generate API Token` button.
 
 ## Schedule API
 

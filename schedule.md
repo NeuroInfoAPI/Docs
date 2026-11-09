@@ -9,27 +9,27 @@
 
 ### Specific Weekly Schedule
 
-`GET https://neuro.appstun.net/api/v2/schedule`
+`GET https://neuroinfoapi.dev/api/v2/schedule`
 
 ### Latest Weekly Schedule
 
-`GET https://neuro.appstun.net/api/v2/schedule/latest`
+`GET https://neuroinfoapi.dev/api/v2/schedule/latest`
 
 ### Schedule Image
 
-`GET https://neuro.appstun.net/api/v2/schedule/image`
+`GET https://neuroinfoapi.dev/api/v2/schedule/image`
 
 ### Search Weekly Schedules
 
-`GET https://neuro.appstun.net/api/v2/schedule/search`
+`GET https://neuroinfoapi.dev/api/v2/schedule/search`
 
 ### Devstream Times
 
-`GET https://neuro.appstun.net/api/v2/devstream/times`
+`GET https://neuroinfoapi.dev/api/v2/devstream/times`
 
 ### Schedule Weeks Index
 
-`GET https://neuro.appstun.net/api/v2/schedule/weeks`
+`GET https://neuroinfoapi.dev/api/v2/schedule/weeks`
 
 ## Description
 
@@ -41,7 +41,7 @@ Access weekly schedule data from the database. Use the specific-week endpoint fo
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/schedule`
+`GET https://neuroinfoapi.dev/api/v2/schedule`
 
 #### Description
 
@@ -64,10 +64,10 @@ Get a weekly schedule from the database for a given week and year.
 #### Request Examples
 
 ```http
-GET https://neuro.appstun.net/api/v2/schedule?week=25&year=2024
+GET https://neuroinfoapi.dev/api/v2/schedule?week=25&year=2024
 Authorization: Bearer YOUR_API_TOKEN
 
-GET https://neuro.appstun.net/api/v2/schedule?week=25
+GET https://neuroinfoapi.dev/api/v2/schedule?week=25
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -98,7 +98,7 @@ Authorization: Bearer YOUR_API_TOKEN
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/schedule/latest`
+`GET https://neuroinfoapi.dev/api/v2/schedule/latest`
 
 #### Description
 
@@ -115,7 +115,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/schedule/latest
+GET https://neuroinfoapi.dev/api/v2/schedule/latest
 ```
 
 #### Response Format
@@ -141,7 +141,7 @@ GET https://neuro.appstun.net/api/v2/schedule/latest
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/schedule/image`
+`GET https://neuroinfoapi.dev/api/v2/schedule/image`
 
 #### Description
 
@@ -161,7 +161,7 @@ Redirects to the currently active image URL for a given schedule week. This endp
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/schedule/image?week=25&year=2024
+GET https://neuroinfoapi.dev/api/v2/schedule/image?week=25&year=2024
 ```
 
 #### Responses
@@ -177,7 +177,7 @@ GET https://neuro.appstun.net/api/v2/schedule/image?week=25&year=2024
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/schedule/search`
+`GET https://neuroinfoapi.dev/api/v2/schedule/search`
 
 #### Description
 
@@ -189,15 +189,15 @@ Searches schedule messages (for example: "karaoke", "offline", or game names) an
 
 #### Parameters
 
-| Parameter    | Type    | Required | Description                                                                          |
-| ------------ | ------- | -------- | ------------------------------------------------------------------------------------ |
-| `query`      | string  | Yes      | Search text. Minimum length is 3 characters.                                         |
-| `year`       | integer | No       | Filter results to one year (must be `>= 2023`).                                      |
-| `limit`      | integer | No       | Number of results per page (`1-100`, effective max currently `25`). Default is `25`. |
-| `sort`       | string  | No       | Sort order by `year/week`: `asc` or `desc` (default: `desc`).                        |
-| `type`       | string  | No       | Filter by schedule day type: `normal`, `offline`, `canceled`, `TBD`, `unknown`.      |
+| Parameter    | Type    | Required | Description                                                                                              |
+| ------------ | ------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `query`      | string  | Yes      | Search text. Minimum length is 3 characters.                                                             |
+| `year`       | integer | No       | Filter results to one year (must be `>= 2023`).                                                          |
+| `limit`      | integer | No       | Number of results per page (`1-100`, effective max currently `25`). Default is `25`.                     |
+| `sort`       | string  | No       | Sort order by `year/week`: `asc` or `desc` (default: `desc`).                                            |
+| `type`       | string  | No       | Filter by schedule day type: `normal`, `offline`, `canceled`, `TBD`, `unknown`.                          |
 | `cursorYear` | integer | No       | Cursor year from previous response `nextCursor.year` (`>= 2023`, not in the future, and used with week). |
-| `cursorWeek` | integer | No       | Cursor week from previous response `nextCursor.week` (must be used with year).       |
+| `cursorWeek` | integer | No       | Cursor week from previous response `nextCursor.week` (must be used with year).                           |
 
 > [!NOTE]
 > This endpoint uses two limiters: `6 requests / minute` and `2 requests / 10 seconds` per authenticated Twitch account.
@@ -205,13 +205,13 @@ Searches schedule messages (for example: "karaoke", "offline", or game names) an
 #### Request Examples
 
 ```http
-GET https://neuro.appstun.net/api/v2/schedule/search?query=karaoke&limit=5&sort=desc
+GET https://neuroinfoapi.dev/api/v2/schedule/search?query=karaoke&limit=5&sort=desc
 Authorization: Bearer YOUR_API_TOKEN
 
-GET https://neuro.appstun.net/api/v2/schedule/search?query=stream&type=normal&limit=10
+GET https://neuroinfoapi.dev/api/v2/schedule/search?query=stream&type=normal&limit=10
 Authorization: Bearer YOUR_API_TOKEN
 
-GET https://neuro.appstun.net/api/v2/schedule/search?query=karaoke&limit=5&sort=desc&cursorYear=2026&cursorWeek=9
+GET https://neuroinfoapi.dev/api/v2/schedule/search?query=karaoke&limit=5&sort=desc&cursorYear=2026&cursorWeek=9
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -282,7 +282,7 @@ Authorization: Bearer YOUR_API_TOKEN
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/devstream/times`
+`GET https://neuroinfoapi.dev/api/v2/devstream/times`
 
 #### Description
 
@@ -299,7 +299,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/devstream/times
+GET https://neuroinfoapi.dev/api/v2/devstream/times
 ```
 
 #### Response Format
@@ -316,7 +316,7 @@ GET https://neuro.appstun.net/api/v2/devstream/times
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/schedule/weeks`
+`GET https://neuroinfoapi.dev/api/v2/schedule/weeks`
 
 #### Description
 
@@ -333,7 +333,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/schedule/weeks
+GET https://neuroinfoapi.dev/api/v2/schedule/weeks
 ```
 
 #### Response Format
@@ -361,14 +361,14 @@ GET https://neuro.appstun.net/api/v2/schedule/weeks
 
 #### Response Properties
 
-| Property            | Type             | Description                                                      | Always included   |
-| ------------------- | ---------------- | ---------------------------------------------------------------- | ----------------- |
-| `year`              | number           | Year of the schedule                                             | Yes               |
-| `week`              | number           | Calendar week number (1-53)                                      | Yes               |
-| `schedule`          | array            | Array of schedule entries (see above)                            | Yes               |
-| `status`            | string           | Schedule status: `auto_twitch`, `auto_discord`, or `confirmed`   | Yes               |
+| Property            | Type             | Description                                                       | Always included   |
+| ------------------- | ---------------- | ----------------------------------------------------------------- | ----------------- |
+| `year`              | number           | Year of the schedule                                              | Yes               |
+| `week`              | number           | Calendar week number (1-53)                                       | Yes               |
+| `schedule`          | array            | Array of schedule entries (see above)                             | Yes               |
+| `status`            | string           | Schedule status: `auto_twitch`, `auto_discord`, or `confirmed`    | Yes               |
 | `imageUrl`          | string or `null` | Current weekly schedule image URL, or `null` if none is available | Yes               |
-| `hasActiveSubathon` | boolean          | Whether there is an active subathon running                      | Only on `/latest` |
+| `hasActiveSubathon` | boolean          | Whether there is an active subathon running                       | Only on `/latest` |
 
 #### Schedule Status Values
 

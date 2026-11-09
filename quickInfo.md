@@ -4,7 +4,7 @@
 
 ## Base URL
 
-`https://neuro.appstun.net/api/v2/`
+`https://neuroinfoapi.dev/api/v2/`
 
 ## Schedule API
 
@@ -189,7 +189,7 @@ In Header: `Authorization: Bearer YOUR_API_TOKEN`
 
 > [!NOTE]
 > To access non-public API endpoints, you need an API token.  
-> Visit the [API Dashboard](https://neuro.appstun.net/api/dash/), connect with your Twitch account, and click the `Generate API Token` button to create one.
+> Visit the [API Dashboard](https://neuroinfoapi.dev/api/dash/), connect with your Twitch account, and click the `Generate API Token` button to create one.
 
 _For a quick overview of endpoints requiring authentication, refer to [needsAuth.md](needsAuth.md)._
 

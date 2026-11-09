@@ -3,7 +3,7 @@
 # TypeScript/JavaScript Client - v1 to v2 Migration
 
 > [!IMPORTANT]
-> New client versions default to `https://neuro.appstun.net/api/v2`. v1 (`/api/v1`) was turned off on **2026-11-01** and returns `410 Gone`.
+> New client versions default to `https://neuroinfoapi.dev/api/v2`. v1 (`/api/v1`) was turned off on **2026-11-01** and returns `410 Gone`.
 
 This guide covers changes in `NeuroInfoAPI-Client.ts` / `.js` when upgrading from the v1-default client to the v2-default client. For raw HTTP migration (envelopes, endpoint renames), see the [full API migration guide](../../migrate.md).
 
@@ -24,8 +24,8 @@ This guide covers changes in `NeuroInfoAPI-Client.ts` / `.js` when upgrading fro
 
 | Option              | v1 client                          | v2 client                                        |
 | ------------------- | ---------------------------------- | ------------------------------------------------ |
-| REST `baseUrl`      | `https://neuro.appstun.net/api/v1` | `https://neuro.appstun.net/api/v2`               |
-| WS `baseUrl`        | `wss://neuro.appstun.net/api/ws`   | `wss://neuro.appstun.net/api/v2/ws`              |
+| REST `baseUrl`      | `https://neuroinfoapi.dev/api/v1` | `https://neuroinfoapi.dev/api/v2`               |
+| WS `baseUrl`        | `wss://neuroinfoapi.dev/api/ws`   | `wss://neuroinfoapi.dev/api/v2/ws`              |
 | Response unwrapping | None                               | Unwraps `{ data: T }`                            |
 | HTTP dependency     | Older external helper              | Built-in `HttpClient` on top of standard `fetch` |
 
@@ -135,7 +135,7 @@ class NeuroApiError {
 
 |                       | v1 default                       | v2 default                          |
 | --------------------- | -------------------------------- | ----------------------------------- |
-| URL                   | `wss://neuro.appstun.net/api/ws` | `wss://neuro.appstun.net/api/v2/ws` |
+| URL                   | `wss://neuroinfoapi.dev/api/ws` | `wss://neuroinfoapi.dev/api/v2/ws` |
 | `scheduleUpdate` type | `isFinal`                        | `status`                            |
 
 Ticket auth now defaults to `GET /api/v2/ws/ticket` when the WebSocket URL is `/api/v2/ws`.

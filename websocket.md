@@ -13,11 +13,11 @@ The v1 socket `/api/ws` and its ticket endpoint `/api/ws/ticket` were removed on
 
 ### Ticket Endpoint
 
-`GET https://neuro.appstun.net/api/v2/ws/ticket`
+`GET https://neuroinfoapi.dev/api/v2/ws/ticket`
 
 ### WebSocket Connection
 
-`WSS wss://neuro.appstun.net/api/v2/ws`
+`WSS wss://neuroinfoapi.dev/api/v2/ws`
 
 ## Description
 
@@ -29,7 +29,7 @@ The WebSocket API provides real-time events for stream, feed, schedule, and suba
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/ws/ticket`
+`GET https://neuroinfoapi.dev/api/v2/ws/ticket`
 
 #### Description
 
@@ -46,7 +46,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/ws/ticket
+GET https://neuroinfoapi.dev/api/v2/ws/ticket
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -59,7 +59,7 @@ Authorization: Bearer YOUR_API_TOKEN
   "data": {
     "ticket": "f8c8e16a...",
     "expiresIn": 30,
-    "usage": "Connect with wss://neuro.appstun.net/api/v2/ws?ticket=<ticket>"
+    "usage": "Connect with wss://neuroinfoapi.dev/api/v2/ws?ticket=<ticket>"
   }
 }
 ```
@@ -68,7 +68,7 @@ Authorization: Bearer YOUR_API_TOKEN
 
 #### Endpoint
 
-`WSS wss://neuro.appstun.net/api/v2/ws`
+`WSS wss://neuroinfoapi.dev/api/v2/ws`
 
 #### Description
 
@@ -78,7 +78,7 @@ Establishes an authenticated WebSocket session. After connecting, clients can su
 
 **Required** - Choose one method:
 
-- **Ticket (recommended)**: `wss://neuro.appstun.net/api/v2/ws?ticket=YOUR_ONE_TIME_TICKET`
+- **Ticket (recommended)**: `wss://neuroinfoapi.dev/api/v2/ws?ticket=YOUR_ONE_TIME_TICKET`
 - **Authorization header** (server-to-server): `Authorization: Bearer YOUR_API_TOKEN`
 
 #### Parameters
@@ -90,11 +90,11 @@ Establishes an authenticated WebSocket session. After connecting, clients can su
 #### Request Examples
 
 ```http
-GET wss://neuro.appstun.net/api/v2/ws?ticket=YOUR_ONE_TIME_TICKET
+GET wss://neuroinfoapi.dev/api/v2/ws?ticket=YOUR_ONE_TIME_TICKET
 ```
 
 ```http
-GET wss://neuro.appstun.net/api/v2/ws
+GET wss://neuroinfoapi.dev/api/v2/ws
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -312,20 +312,20 @@ Only entries published after the newest previously seen entry are included. Chan
 
 #### Available Event Types
 
-| Event Type                 | Description                                                            |
-| -------------------------- | ---------------------------------------------------------------------- |
-| `blogFeedUpdate`           | Blog feed changed; payload contains only changed/new entries           |
-| `xFeedNewEntries`          | Newly published X posts, replies, and retweets                         |
-| `xFeedUpdate`              | Deprecated alias emitted together with `xFeedNewEntries`               |
-| `scheduleUpdate`           | Weekly schedule was updated                                            |
-| `subathonUpdate`           | Subathon state changed                                                 |
-| `subathonGoalUpdate`       | Subathon goal status changed                                           |
-| `streamOnline`             | Stream started                                                         |
-| `streamUpdate`             | Stream metadata changed (throttled)                                    |
-| `streamOffline`            | Stream ended                                                           |
-| `secretneuroaccountOnline` | secretneuroaccount went live (same payload as `streamOnline`)          |
-| `streamRaidIncoming`       | Raid incoming event                                                    |
-| `streamRaidOutgoing`       | Raid outgoing event                                                    |
+| Event Type                 | Description                                                   |
+| -------------------------- | ------------------------------------------------------------- |
+| `blogFeedUpdate`           | Blog feed changed; payload contains only changed/new entries  |
+| `xFeedNewEntries`          | Newly published X posts, replies, and retweets                |
+| `xFeedUpdate`              | Deprecated alias emitted together with `xFeedNewEntries`      |
+| `scheduleUpdate`           | Weekly schedule was updated                                   |
+| `subathonUpdate`           | Subathon state changed                                        |
+| `subathonGoalUpdate`       | Subathon goal status changed                                  |
+| `streamOnline`             | Stream started                                                |
+| `streamUpdate`             | Stream metadata changed (throttled)                           |
+| `streamOffline`            | Stream ended                                                  |
+| `secretneuroaccountOnline` | secretneuroaccount went live (same payload as `streamOnline`) |
+| `streamRaidIncoming`       | Raid incoming event                                           |
+| `streamRaidOutgoing`       | Raid outgoing event                                           |
 
 ## Error Responses
 

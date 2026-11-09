@@ -73,16 +73,16 @@ This repository contains documentation for all public API areas:
 ## 📖 Getting Started
 
 1. **Browse the documentation** - Start with [quickInfo.md](quickInfo.md) for a quick overview
-2. **Get an API token** - Visit the [API Dashboard](https://neuro.appstun.net/api/dash/) if you need access to protected endpoints
+2. **Get an API token** - Visit the [API Dashboard](https://neuroinfoapi.dev/api/dash/) if you need access to protected endpoints
 3. **Test endpoints** - Use the examples in each documentation file
 4. **Check authentication** - Review [needsAuth.md](needsAuth.md) to see which endpoints require tokens
 5. **Handle errors** - Read [errors.md](errors.md) for error codes and troubleshooting
 
 ## 🔧 API Technical Details
 
-- **Base URL**: `https://neuro.appstun.net/api/v2/`
-- **WebSocket URL**: `wss://neuro.appstun.net/api/v2/ws`
-- **WebSocket Ticket URL**: `https://neuro.appstun.net/api/v2/ws/ticket`
+- **Base URL**: `https://neuroinfoapi.dev/api/v2/`
+- **WebSocket URL**: `wss://neuroinfoapi.dev/api/v2/ws`
+- **WebSocket Ticket URL**: `https://neuroinfoapi.dev/api/v2/ws/ticket`
 - **HTTP Methods**: GET only
 - **Response Format**: JSON endpoints in v2 wrap REST success as `{"data": ...}` and use `{"error": {"code": "...", "message": "...", "timestamp": ..., "path": "..."}}` for errors. The `/schedule/image` redirect intentionally has no JSON envelope.
 - **Content-Type**: `application/json` for JSON REST endpoints

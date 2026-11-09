@@ -10,15 +10,15 @@
 
 ### Current Stream Status
 
-`GET https://neuro.appstun.net/api/v2/twitch/stream`
+`GET https://neuroinfoapi.dev/api/v2/twitch/stream`
 
 ### All VODs
 
-`GET https://neuro.appstun.net/api/v2/twitch/vods`
+`GET https://neuroinfoapi.dev/api/v2/twitch/vods`
 
 ### Specific VOD
 
-`GET https://neuro.appstun.net/api/v2/twitch/vod`
+`GET https://neuroinfoapi.dev/api/v2/twitch/vod`
 
 ## Description
 
@@ -30,7 +30,7 @@ Access Twitch stream data and VOD information. Stream data is publicly available
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/twitch/stream`
+`GET https://neuroinfoapi.dev/api/v2/twitch/stream`
 
 #### Description
 
@@ -43,7 +43,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/twitch/stream
+GET https://neuroinfoapi.dev/api/v2/twitch/stream
 ```
 
 #### Response Format
@@ -71,7 +71,7 @@ GET https://neuro.appstun.net/api/v2/twitch/stream
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/twitch/vods`
+`GET https://neuroinfoapi.dev/api/v2/twitch/vods`
 
 #### Description
 
@@ -88,7 +88,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/twitch/vods
+GET https://neuroinfoapi.dev/api/v2/twitch/vods
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -121,7 +121,7 @@ Authorization: Bearer YOUR_API_TOKEN
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/twitch/vod`
+`GET https://neuroinfoapi.dev/api/v2/twitch/vod`
 
 #### Description
 
@@ -140,7 +140,7 @@ Get a specific VOD by stream ID.
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/twitch/vod?id=123456789
+GET https://neuroinfoapi.dev/api/v2/twitch/vod?id=123456789
 Authorization: Bearer YOUR_API_TOKEN
 ```
 

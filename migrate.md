@@ -4,7 +4,7 @@
 
 > [!IMPORTANT]
 > **v1 was turned off on 2026-11-01.** Requests to `/api/v1`, `/api/ws`, and `/api/ws/ticket` now return `410 Gone`. Migrate to `/api/v2/`.<br>
-> Check `GET https://neuro.appstun.net/api/info` for the latest version status and sunset date.
+> Check `GET https://neuroinfoapi.dev/api/info` for the latest version status and sunset date.
 
 This guide summarizes every breaking and behavioral change between v1 and v2. Use it together with the updated endpoint docs and the [TypeScript/JavaScript client migration guide](clients/TypeScript-JavaScript/migrate.md) if you use the official client.
 
@@ -14,18 +14,18 @@ This guide summarizes every breaking and behavioral change between v1 and v2. Us
 2. Wrap success handling in a `data` envelope: `const payload = json.data`.
 3. Update renamed endpoints (see [Endpoint path changes](#endpoint-path-changes)).
 4. Replace schedule `isFinal` with `status` (see [Schedule `status`](#schedule-status)).
-5. Switch WebSocket clients to `wss://neuro.appstun.net/api/v2/ws`.
+5. Switch WebSocket clients to `wss://neuroinfoapi.dev/api/v2/ws`.
 6. Update query parameters where they changed (`/twitch/vod`, subathon years).
 7. Error top-level shape stays `{ error: { code, message, ... } }`; v2 REST errors also include `timestamp` and `path` (see [Errors](#errors)).
 
 ## Base URL
 
-|              | v1 (removed)                     | v2 (current)                        |
-| ------------ | ----------------------------------- | ----------------------------------- |
-| REST         | `https://neuro.appstun.net/api/v1/` | `https://neuro.appstun.net/api/v2/` |
-| WebSocket    | `wss://neuro.appstun.net/api/ws`    | `wss://neuro.appstun.net/api/v2/ws` |
-| WS ticket    | `GET /api/ws/ticket`                | `GET /api/v2/ws/ticket`             |
-| Version info | -                                   | `GET /api/info`                     |
+|              | v1 (removed)                       | v2 (current)                       |
+| ------------ | ---------------------------------- | ---------------------------------- |
+| REST         | `https://neuroinfoapi.dev/api/v1/` | `https://neuroinfoapi.dev/api/v2/` |
+| WebSocket    | `wss://neuroinfoapi.dev/api/ws`    | `wss://neuroinfoapi.dev/api/v2/ws` |
+| WS ticket    | `GET /api/ws/ticket`               | `GET /api/v2/ws/ticket`            |
+| Version info | -                                  | `GET /api/info`                    |
 
 `/api/auth` and dashboard routes are not versioned under `/api/v2`.
 
@@ -113,10 +113,10 @@ Schedule search results in v2 also use `status` instead of `isFinal`.
 
 ## Subathon `/subathon/years`
 
-|                  | v1                                 | v2                          |
-| ---------------- | ---------------------------------- | --------------------------- |
-| Default response | Array of years: `[2023, 2024]` | Object mapping year -> name |
-| `?detailed`      | Required for year-to-name mapping  | Removed                     |
+|                  | v1                                | v2                          |
+| ---------------- | --------------------------------- | --------------------------- |
+| Default response | Array of years: `[2023, 2024]`    | Object mapping year -> name |
+| `?detailed`      | Required for year-to-name mapping | Removed                     |
 
 If you relied on the plain year list, use `Object.keys(json.data)` on the v2 response.
 
@@ -131,9 +131,9 @@ The main change is the path and the consistent outer envelope across JSON endpoi
 
 ## WebSocket
 
-|                          | v1 (removed)                                    | v2 (recommended)                                      |
+|                          | v1 (removed)                                       | v2 (recommended)                                      |
 | ------------------------ | -------------------------------------------------- | ----------------------------------------------------- |
-| URL                      | `wss://neuro.appstun.net/api/ws`                   | `wss://neuro.appstun.net/api/v2/ws`                   |
+| URL                      | `wss://neuroinfoapi.dev/api/ws`                    | `wss://neuroinfoapi.dev/api/v2/ws`                    |
 | Ticket flow              | `GET /api/ws/ticket` -> connect with `?ticket=...` | `GET /api/v2/ws/ticket` -> connect with `?ticket=...` |
 | `scheduleUpdate` payload | includes `isFinal: boolean`                        | includes `status: ScheduleStatus`                     |
 
@@ -147,7 +147,7 @@ Since **2026-11-01**, `/api/v1` and its subpaths, plus `/api/ws` and `/api/ws/ti
 {
   "error": {
     "code": "AP5",
-    "message": "API v1 was removed on 2026-11-01. Please migrate to /api/v2. See https://neuro.appstun.net/api/docs"
+    "message": "API v1 was removed on 2026-11-01. Please migrate to /api/v2. See https://neuroinfoapi.dev/api/docs"
   }
 }
 ```
@@ -160,12 +160,12 @@ The v1 WebSocket handshake also returns HTTP `410` instead of upgrading. These r
 
 ```javascript
 // v1
-const res = await fetch("https://neuro.appstun.net/api/v1/twitch/stream");
+const res = await fetch("https://neuroinfoapi.dev/api/v1/twitch/stream");
 const stream = await res.json();
 console.log(stream.isLive);
 
 // v2
-const res = await fetch("https://neuro.appstun.net/api/v2/twitch/stream");
+const res = await fetch("https://neuroinfoapi.dev/api/v2/twitch/stream");
 const json = await res.json();
 if (json.error) throw new Error(json.error.message);
 const stream = json.data;

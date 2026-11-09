@@ -39,12 +39,12 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 
 ### General API Errors (AP)
 
-| Code  | Error                  | Description                                  |
-| ----- | ---------------------- | -------------------------------------------- |
-| `AP1` | `Api_InternalError`    | Internal server error                        |
-| `AP2` | `Api_MethodNotAllowed` | Method not allowed (API tokens are GET-only) |
-| `AP3` | `Api_NotFound`         | 404 Not Found                                |
-| `AP4` | `Api_InvalidQuery`     | Invalid query parameters                     |
+| Code  | Error                  | Description                                    |
+| ----- | ---------------------- | ---------------------------------------------- |
+| `AP1` | `Api_InternalError`    | Internal server error                          |
+| `AP2` | `Api_MethodNotAllowed` | Method not allowed (API tokens are GET-only)   |
+| `AP3` | `Api_NotFound`         | 404 Not Found                                  |
+| `AP4` | `Api_InvalidQuery`     | Invalid query parameters                       |
 | `AP5` | `Api_VersionRemoved`   | API v1 removed; HTTP `410 Gone`, migrate to v2 |
 
 ### Schedule Errors (SC)
@@ -84,17 +84,17 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 
 ### Rate Limit Errors (RL)
 
-| Code  | Error                       | Description                                             |
-| ----- | --------------------------- | ------------------------------------------------------- |
-| `RL2` | `RateLimit_TooManyRequests` | Too many requests from this API token                   |
-| `RL3` | `RateLimit_Strict`          | Rate limit exceeded: Maximum 30 requests per minute     |
-| `RL4` | `RateLimit_Standard`        | Rate limit exceeded: Maximum 100 requests per minute    |
-| `RL5` | `RateLimit_Generous`        | Rate limit exceeded: Maximum 300 requests per minute    |
-| `RL6` | `RateLimit_Burst`           | Rate limit exceeded: Maximum 10 requests per 10 seconds |
-| `RL7` | `RateLimit_Sensitive`       | Rate limit exceeded: Maximum 2 requests per 10 seconds  |
-| `RL8` | `RateLimit_SearchMinute`    | Rate limit exceeded: Maximum 6 requests per minute      |
-| `RL9` | `RateLimit_BlogFeedMinute`  | Rate limit exceeded: Maximum 16 requests per minute     |
-| `RL10` | `RateLimit_XFeedMinute` | Rate limit exceeded: Maximum 16 requests per minute         |
+| Code   | Error                       | Description                                             |
+| ------ | --------------------------- | ------------------------------------------------------- |
+| `RL2`  | `RateLimit_TooManyRequests` | Too many requests from this API token                   |
+| `RL3`  | `RateLimit_Strict`          | Rate limit exceeded: Maximum 30 requests per minute     |
+| `RL4`  | `RateLimit_Standard`        | Rate limit exceeded: Maximum 100 requests per minute    |
+| `RL5`  | `RateLimit_Generous`        | Rate limit exceeded: Maximum 300 requests per minute    |
+| `RL6`  | `RateLimit_Burst`           | Rate limit exceeded: Maximum 10 requests per 10 seconds |
+| `RL7`  | `RateLimit_Sensitive`       | Rate limit exceeded: Maximum 2 requests per 10 seconds  |
+| `RL8`  | `RateLimit_SearchMinute`    | Rate limit exceeded: Maximum 6 requests per minute      |
+| `RL9`  | `RateLimit_BlogFeedMinute`  | Rate limit exceeded: Maximum 16 requests per minute     |
+| `RL10` | `RateLimit_XFeedMinute`     | Rate limit exceeded: Maximum 16 requests per minute     |
 
 ### Subathon Errors (SB)
 
@@ -113,9 +113,9 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 
 ### X Feed Errors (XF)
 
-| Code  | Error               | Description                          |
-| ----- | ------------------- | ------------------------------------ |
-| `XF1` | `XFeed_NoFeedData` | No feed data found for this user     |
+| Code  | Error              | Description                      |
+| ----- | ------------------ | -------------------------------- |
+| `XF1` | `XFeed_NoFeedData` | No feed data found for this user |
 
 ## Testing Endpoint
 
@@ -123,7 +123,7 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/test/geterror`
+`GET https://neuroinfoapi.dev/api/test/geterror`
 
 #### Description
 
@@ -138,9 +138,9 @@ Get a specific error response by providing an error code. This endpoint is usefu
 #### Request Examples
 
 ```http
-GET https://neuro.appstun.net/api/test/geterror?code=AP1
-GET https://neuro.appstun.net/api/test/geterror?code=SC1
-GET https://neuro.appstun.net/api/test/geterror
+GET https://neuroinfoapi.dev/api/test/geterror?code=AP1
+GET https://neuroinfoapi.dev/api/test/geterror?code=SC1
+GET https://neuroinfoapi.dev/api/test/geterror
 ```
 
 #### Response Format

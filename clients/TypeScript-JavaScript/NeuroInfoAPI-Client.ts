@@ -5,7 +5,7 @@ const enum WebSocketState { Connecting, Open, Closing, Closed }
 const enum SubscriptionState { Unsubscribed = "unsubscribed", Subscribing = "subscribing", Subscribed = "subscribed", Unsubscribing = "unsubscribing" }
 
 const apiVersion = "v2";
-const defaultApiBaseUrl = `neuro.appstun.net/api/${apiVersion}`;
+const defaultApiBaseUrl = `neuroinfoapi.dev/api/${apiVersion}`;
 
 function invokeSafely(callback: (...args: any[]) => unknown, ...args: any[]): void {
   try {
@@ -1344,7 +1344,7 @@ export namespace Utils {
 }
 
 export interface NeuroInfoApiBaseOptions {
-  /** Host and API path without protocol. HTTP(S)/WS(S) protocols are accepted temporarily for compatibility and will be removed in a future major version. Default: `neuro.appstun.net/api/v2`. */
+  /** Host and API path without protocol. HTTP(S)/WS(S) protocols are accepted temporarily for compatibility and will be removed in a future major version. Default: `neuroinfoapi.dev/api/v2`. */
   apiBaseUrl?: string;
   /** Use HTTPS/WSS instead of HTTP/WS. Default: `true`. */
   useTls?: boolean;

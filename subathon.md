@@ -10,15 +10,15 @@
 
 ### Current Subathon
 
-`GET https://neuro.appstun.net/api/v2/subathon`
+`GET https://neuroinfoapi.dev/api/v2/subathon`
 
 ### Subathon Years
 
-`GET https://neuro.appstun.net/api/v2/subathon/years`
+`GET https://neuroinfoapi.dev/api/v2/subathon/years`
 
 ### Subathon Data (Specific Year)
 
-`GET https://neuro.appstun.net/api/v2/subathon`
+`GET https://neuroinfoapi.dev/api/v2/subathon`
 
 ## Description
 
@@ -30,7 +30,7 @@ Access subathon data and goal information. The current subathon endpoint is publ
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/subathon`
+`GET https://neuroinfoapi.dev/api/v2/subathon`
 
 #### Description
 
@@ -47,7 +47,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/subathon
+GET https://neuroinfoapi.dev/api/v2/subathon
 ```
 
 #### Response Format
@@ -81,7 +81,7 @@ GET https://neuro.appstun.net/api/v2/subathon
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/subathon/years`
+`GET https://neuroinfoapi.dev/api/v2/subathon/years`
 
 #### Description
 
@@ -98,7 +98,7 @@ None
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/subathon/years
+GET https://neuroinfoapi.dev/api/v2/subathon/years
 ```
 
 #### Response Format
@@ -119,7 +119,7 @@ GET https://neuro.appstun.net/api/v2/subathon/years
 
 #### Endpoint
 
-`GET https://neuro.appstun.net/api/v2/subathon`
+`GET https://neuroinfoapi.dev/api/v2/subathon`
 
 #### Description
 
@@ -141,7 +141,7 @@ Get subathon data for a specific year.
 #### Request Example
 
 ```http
-GET https://neuro.appstun.net/api/v2/subathon?year=2025
+GET https://neuroinfoapi.dev/api/v2/subathon?year=2025
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
@@ -171,16 +171,16 @@ Authorization: Bearer YOUR_API_TOKEN
 
 #### Subathon Properties
 
-| Property         | Type    | Description                                          | Always included |
-| ---------------- | ------- | ---------------------------------------------------- | --------------- |
-| `year`           | number  | Year of the subathon                                 | Yes             |
-| `name`           | string  | Name of the subathon                                 | Yes             |
-| `subcount`       | number  | Current subscriber count                             | Yes             |
-| `goals`          | object  | Dictionary of goals with subscriber thresholds       | Yes             |
-| `subcountMilestones` | object  | Subscriber milestones (every 1000 subs) with timestamps | No           |
-| `isActive`       | boolean | Whether the subathon is currently active and running | Yes             |
-| `startTimestamp` | number  | Start of subathon in milliseconds                    | Should          |
-| `endTimestamp`   | number  | End of subathon in milliseconds                      | No              |
+| Property             | Type    | Description                                             | Always included |
+| -------------------- | ------- | ------------------------------------------------------- | --------------- |
+| `year`               | number  | Year of the subathon                                    | Yes             |
+| `name`               | string  | Name of the subathon                                    | Yes             |
+| `subcount`           | number  | Current subscriber count                                | Yes             |
+| `goals`              | object  | Dictionary of goals with subscriber thresholds          | Yes             |
+| `subcountMilestones` | object  | Subscriber milestones (every 1000 subs) with timestamps | No              |
+| `isActive`           | boolean | Whether the subathon is currently active and running    | Yes             |
+| `startTimestamp`     | number  | Start of subathon in milliseconds                       | Should          |
+| `endTimestamp`       | number  | End of subathon in milliseconds                         | No              |
 
 #### Goal Properties
 
@@ -193,9 +193,9 @@ Authorization: Bearer YOUR_API_TOKEN
 
 `subcountMilestones` keys are subscriber counts (every 1000 subs). Values contain the Unix timestamp (ms) when that milestone was first reached.
 
-| Property    | Type   | Description                              |
-| ----------- | ------ | ---------------------------------------- |
-| `timestamp` | number | Unix timestamp in milliseconds           |
+| Property    | Type   | Description                    |
+| ----------- | ------ | ------------------------------ |
+| `timestamp` | number | Unix timestamp in milliseconds |
 
 ## Error Responses
 

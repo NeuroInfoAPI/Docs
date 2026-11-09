@@ -3,6 +3,12 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [09.11.2026]
+
+### Updated
+
+- Updated API domain from `neuro.appstun.net` to `neuroinfoapi.dev`
+ 
 ## [01.11.2026]
 
 ### Removed

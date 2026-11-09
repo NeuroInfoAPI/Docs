@@ -4,7 +4,7 @@
 
 ## Endpoint
 
-`GET https://neuro.appstun.net/api/v2/blog`
+`GET https://neuroinfoapi.dev/api/v2/blog`
 
 ## Description
 
@@ -23,12 +23,12 @@ Returns the cached Neuro-sama blog feed as JSON. By default, each entry includes
 ## Request Examples
 
 ```http
-GET https://neuro.appstun.net/api/v2/blog
+GET https://neuroinfoapi.dev/api/v2/blog
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
 ```http
-GET https://neuro.appstun.net/api/v2/blog?raw
+GET https://neuroinfoapi.dev/api/v2/blog?raw
 Authorization: Bearer YOUR_API_TOKEN
 ```
 

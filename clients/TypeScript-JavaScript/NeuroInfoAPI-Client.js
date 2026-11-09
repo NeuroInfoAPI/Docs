@@ -1,5 +1,5 @@
 const apiVersion = "v2";
-const defaultApiBaseUrl = `neuro.appstun.net/api/${apiVersion}`;
+const defaultApiBaseUrl = `neuroinfoapi.dev/api/${apiVersion}`;
 function invokeSafely(callback, ...args) {
     try {
         const result = callback(...args);

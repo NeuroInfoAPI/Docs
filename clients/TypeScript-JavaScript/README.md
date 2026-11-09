@@ -5,7 +5,7 @@
 A TypeScript client with proper type definitions for its supported NeuroInfoAPI endpoints.
 
 > [!NOTE]
-> The client defaults to `https://neuro.appstun.net/api/v2` and unwraps API responses automatically.  
+> The client defaults to `https://neuroinfoapi.dev/api/v2` and unwraps API responses automatically.  
 > Upgrading from v1? See the **[client migration guide](migrate.md)**.
 
 **The client is also available as an NPM package: [`neuroinfoapi-client`](https://www.npmjs.com/package/neuroinfoapi-client)** 
