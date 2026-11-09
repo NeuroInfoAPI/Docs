@@ -1,4 +1,4 @@
-# NeuroInfoApi Documentation
+# NeuroInfoAPI Documentation
 
 > [!IMPORTANT]
 > **v1 was turned off on 2026-11-01.** Use **v2**. <br>
@@ -6,7 +6,7 @@
 > See the **[v1 -> v2 migration guide](migrate.md)** for endpoint, response, and WebSocket changes. <br>
 > If you still need the v1 docs ... i guess they are [here](https://github.com/NeuroInfoAPI/Docs/tree/v1).
 
-Welcome to the **NeuroInfoApi** documentation repository! This API provides comprehensive access to Neuro-sama stream data, including schedules, VODs, Twitch information, and subathon details.
+Welcome to the **NeuroInfoAPI** documentation repository! This API provides comprehensive access to Neuro-sama stream data, including schedules, VODs, Twitch information, and subathon details.
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Appstun/NeuroInfoAPI-Docs)
 
