@@ -252,20 +252,21 @@ await wsClient.connect();
 
 **Available WebSocket Events:**
 
-| Event                      | Description                                          |
-| -------------------------- | ---------------------------------------------------- |
-| `streamOnline`             | Stream went live                                     |
-| `streamOffline`            | Stream went offline                                  |
-| `streamUpdate`             | Stream metadata changed                              |
-| `secretneuroaccountOnline` | Special alert: secretneuroaccount is live            |
-| `streamRaidIncoming`       | Incoming raid event                                  |
-| `streamRaidOutgoing`       | Outgoing raid event                                  |
-| `blogFeedUpdate`           | Blog feed changed; includes changed/new entries only |
+| Event                      | Description                                                      |
+| -------------------------- | ---------------------------------------------------------------- |
+| `streamOnline`             | Stream went live                                                 |
+| `streamOffline`            | Stream went offline                                              |
+| `streamUpdate`             | Stream metadata changed                                          |
+| `secretneuroaccountOnline` | Special alert: secretneuroaccount is live                        |
+| `streamRaidIncoming`       | Incoming raid event                                              |
+| `streamRaidOutgoing`       | Outgoing raid event                                              |
+| `shopProductsUpdate`       | Shop products changed; includes the full current catalog         |
+| `blogFeedUpdate`           | Blog feed changed; includes changed/new entries only             |
 | `xFeedNewEntries`          | New X entries; includes account and newly published entries only |
-| `xFeedUpdate`              | Deprecated alias emitted together with `xFeedNewEntries`      |
-| `scheduleUpdate`           | Weekly schedule changed                              |
-| `subathonUpdate`           | Subathon state changed                               |
-| `subathonGoalUpdate`       | Subathon goal changed                                |
+| `xFeedUpdate`              | Deprecated alias emitted together with `xFeedNewEntries`         |
+| `scheduleUpdate`           | Weekly schedule changed                                          |
+| `subathonUpdate`           | Subathon state changed                                           |
+| `subathonGoalUpdate`       | Subathon goal changed                                            |
 
 `secretneuroaccountOnline` sends the same payload shape as `streamOnline`, but it is emitted specifically when the Twitch account `secretneuroaccount` goes live. This is the only event for this account.
 

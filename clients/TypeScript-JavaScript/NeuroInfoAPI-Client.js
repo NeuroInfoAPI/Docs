@@ -251,6 +251,10 @@ export class NeuroInfoApiClient {
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/x-feed.md#endpoint
          */
         this.getXFeed = (user) => this.request("/x-feed", { user });
+        /** Fetches the full shop catalog. Requires an API token. Prices optionally use the requested currency. */
+        this.getShopProducts = (currency) => this.request("/shop/products", currency === undefined ? undefined : { currency });
+        /** Fetches a shop product by ID. Requires an API token. Price currencyCode identifies the returned currency. */
+        this.getShopProduct = (id, currency) => this.request("/shop/product", { id, ...(currency === undefined ? {} : { currency }) });
         const apiUrl = options.apiBaseUrl != null ? createClientUrls(options.apiBaseUrl, options.useTls).api : (options.baseUrl ?? createClientUrls().api);
         this.apiInstance = new HttpClient({ baseURL: apiUrl, timeout: options.requestTimeoutMs, headers: { "Content-Type": "application/json" } });
         if (token != null)
@@ -1199,6 +1203,7 @@ export var Utils;
     Utils.hasScheduleImage = hasScheduleImage;
 })(Utils || (Utils = {}));
 const wsEventTypes = new Set([
+    "shopProductsUpdate",
     "blogFeedUpdate",
     "xFeedNewEntries",
     "xFeedUpdate",

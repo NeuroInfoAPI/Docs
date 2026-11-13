@@ -365,6 +365,14 @@ export class NeuroInfoApiClient {
    * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/x-feed.md#endpoint
    */
   public getXFeed = (user: XFeedAccount) => this.request<XFeedEntry[]>("/x-feed", { user });
+
+  /** Fetches the full shop catalog. Requires an API token. Prices optionally use the requested currency. */
+  public getShopProducts = (currency?: string) =>
+    this.request<ShopProduct[]>("/shop/products", currency === undefined ? undefined : { currency });
+
+  /** Fetches a shop product by ID. Requires an API token. Price currencyCode identifies the returned currency. */
+  public getShopProduct = (id: string, currency?: string) =>
+    this.request<ShopProduct>("/shop/product", { id, ...(currency === undefined ? {} : { currency }) });
 }
 
 /**
@@ -1509,7 +1517,56 @@ export interface WsSubathonGoalUpdateData {
 }
 
 /** Mapping of event types to their data structures. */
+export interface ShopImage {
+  url: string;
+  altText: string | null;
+  width: number;
+  height: number;
+}
+
+export interface ShopMoney {
+  amount: string;
+  currencyCode: string;
+}
+
+export interface ShopProduct {
+  id: string;
+  title: string;
+  handle: string;
+  url: string;
+  description: string;
+  descriptionHtml: string;
+  vendor: string;
+  productType: string;
+  tags: string[];
+  availableForSale: boolean;
+  createdAt: number;
+  updatedAt: number;
+  publishedAt: number;
+  seo: { title: string | null; description: string | null };
+  options: { name: string; values: string[] }[];
+  images: ShopImage[];
+  variants: {
+    id: string;
+    title: string;
+    sku: string | null;
+    availableForSale: boolean;
+    price: ShopMoney;
+    compareAtPrice: ShopMoney | null;
+    selectedOptions: { name: string; value: string }[];
+    image: ShopImage | null;
+  }[];
+  collections: { id: string; title: string }[];
+  metafields: { namespace: string; key: string; type: string; value: string; reference: Record<string, unknown> | null }[];
+}
+
+export interface ShopProductsUpdateData {
+  products: ShopProduct[];
+}
+
+/** Mapping of event types to their data structures. */
 export interface WsEventDataMap {
+  shopProductsUpdate: ShopProductsUpdateData;
   blogFeedUpdate: BlogFeedData;
   xFeedNewEntries: XFeedNewEntriesData;
   /** @deprecated Subscribe to xFeedNewEntries instead. */
@@ -1526,6 +1583,7 @@ export interface WsEventDataMap {
 }
 
 const wsEventTypes = new Set([
+  "shopProductsUpdate",
   "blogFeedUpdate",
   "xFeedNewEntries",
   "xFeedUpdate",
