@@ -140,6 +140,31 @@ _Full docs of endpoint: [x-feed.md](x-feed.md)_
 - **Cache**: `120` seconds
 - **Example**: `/x-feed?user=NeurosamaAI`
 
+## Shop API
+
+_Full docs of endpoint: [shop.md](shop.md)_
+
+### All Products
+
+`GET /shop/products`
+
+- **Purpose**: Neuro-sama shop products, including older drops when available
+- **Parameters**: `currency` (optional, for example `EUR`)
+- **Public**: No (API token required)
+- **Example**: `/shop/products?currency=EUR`
+- **Updates**: Every 30 seconds to 2 minutes; private response cache: 30 seconds
+
+### Specific Product
+
+`GET /shop/product`
+
+- **Purpose**: Specific shop product by product ID
+- **Parameters**: `id` (required), `currency` (optional, for example `EUR`)
+- **Public**: No (API token required)
+- **Example**: `/shop/product?id=1234567890123&currency=EUR`
+- **Updates**: Every 30 seconds to 2 minutes; private response cache: 30 seconds
+- **Note**: Price `currencyCode` identifies the returned currency; failed conversions keep the original prices
+
 ## Devstream API
 
 _Full docs of endpoint: [schedule.md](schedule.md#devstream-times)_
@@ -177,9 +202,9 @@ _Full docs of endpoint: [websocket.md](websocket.md)_
 
 `WSS /api/v2/ws`
 
-- **Purpose**: Receive real-time stream/schedule/subathon events
+- **Purpose**: Receive real-time stream, schedule, subathon, feed, and shop events
 - **Authentication**: Required (ticket query param or Authorization header)
-- **Event Types**: `blogFeedUpdate`, `xFeedNewEntries`, `xFeedUpdate` (deprecated), `scheduleUpdate`, `subathonUpdate`, `subathonGoalUpdate`, `streamOnline`, `streamUpdate`, `streamOffline`, `secretneuroaccountOnline`, `streamRaidIncoming`, `streamRaidOutgoing`
+- **Event Types**: `shopProductsUpdate`, `blogFeedUpdate`, `xFeedNewEntries`, `xFeedUpdate` (deprecated), `scheduleUpdate`, `subathonUpdate`, `subathonGoalUpdate`, `streamOnline`, `streamUpdate`, `streamOffline`, `secretneuroaccountOnline`, `streamRaidIncoming`, `streamRaidOutgoing`
 - **Heartbeat Tip**: For custom clients, use lightweight `ping`/`pong` for liveness checks
 - **Example**: `/api/v2/ws?ticket=YOUR_ONE_TIME_TICKET`
 

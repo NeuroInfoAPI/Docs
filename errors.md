@@ -117,6 +117,15 @@ This applies to route handlers, query validation (`AP4`), authentication (`AU*`)
 | ----- | ------------------ | -------------------------------- |
 | `XF1` | `XFeed_NoFeedData` | No feed data found for this user |
 
+### Shop Errors (SH)
+
+| Code  | Error              | Description                                               |
+| ----- | ------------------ | --------------------------------------------------------- |
+| `SH1` | `Shop_NoProduct`   | No shop product found with the given ID (HTTP `404`)      |
+| `SH2` | `Shop_Unavailable` | Shop product data is temporarily unavailable (HTTP `503`) |
+
+`SH2` responses include `Retry-After: 120`. Unsupported currencies and unavailable exchange rates return success with original prices and currency codes; see [shop.md](shop.md#currency-conversion).
+
 ## Testing Endpoint
 
 ### Get Error Code
@@ -201,7 +210,7 @@ The API implements multiple rate limiting tiers:
 
 ### Parameter Validation
 
-- **Schedule / Subathon / VOD**: invalid or missing query parameters return `AP4`; missing resources return domain codes (`SC1`, `SB4`, `VD1`, …)
+- **Schedule / Subathon / VOD / Shop**: invalid or missing query parameters return `AP4`; missing resources return domain codes (`SC1`, `SB4`, `VD1`, …)
 
 ### WebSocket Errors
 

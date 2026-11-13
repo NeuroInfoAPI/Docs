@@ -258,6 +258,81 @@ Only entries published after the newest previously seen entry are included. Chan
 
 `xFeedUpdate` is deprecated. It is currently emitted at the same time with the same payload so existing consumers keep working. New consumers should only subscribe to `xFeedNewEntries`; subscribing to both produces duplicate notifications.
 
+##### Shop Products Update Event
+
+Sends the full current catalog when products change, including additions and removals. Product fields match the [Shop API](shop.md#product-properties), with original shop currencies. Replace your previous catalog with `products`; removed products are no longer included.
+
+```json
+{
+  "type": "event",
+  "data": {
+    "eventType": "shopProductsUpdate",
+    "eventData": {
+      "products": [
+        {
+          "id": "1234567890123",
+          "title": "Neuro-sama Plush",
+          "handle": "neuro-sama-plush",
+          "url": "https://neurosama.shop/p/1234567890123",
+          "description": "Neuro-sama plush.",
+          "descriptionHtml": "<p>Neuro-sama plush.</p>",
+          "vendor": "Neuro-sama",
+          "productType": "Plush",
+          "tags": [],
+          "availableForSale": true,
+          "createdAt": 1793491200000,
+          "updatedAt": 1793577600000,
+          "publishedAt": 1793491200000,
+          "seo": {
+            "title": null,
+            "description": null
+          },
+          "options": [
+            {
+              "name": "Size",
+              "values": [
+                "One size"
+              ]
+            }
+          ],
+          "images": [],
+          "variants": [
+            {
+              "id": "1234567890456",
+              "title": "One size",
+              "sku": null,
+              "availableForSale": true,
+              "price": {
+                "amount": "29.99",
+                "currencyCode": "USD"
+              },
+              "compareAtPrice": null,
+              "selectedOptions": [
+                {
+                  "name": "Size",
+                  "value": "One size"
+                }
+              ],
+              "image": null
+            }
+          ],
+          "collections": [
+            {
+              "id": "123456789",
+              "title": "Neuro-sama"
+            }
+          ],
+          "metafields": []
+        }
+      ]
+    },
+    "timestamp": 1794182400123
+  }
+}
+```
+
+`timestamp` is the event send time in Unix milliseconds. Product timestamps describe changes in the shop. Initial loads, unchanged results, and failed updates do not emit this event. Use REST for the initial catalog and after reconnecting.
+
 ##### Subscription Responses
 
 ```json
@@ -286,6 +361,7 @@ Only entries published after the newest previously seen entry are included. Chan
   "data": {
     "subscribedEvents": ["streamOnline"],
     "availableEvents": [
+      "shopProductsUpdate",
       "blogFeedUpdate",
       "xFeedNewEntries",
       "xFeedUpdate",
@@ -312,20 +388,21 @@ Only entries published after the newest previously seen entry are included. Chan
 
 #### Available Event Types
 
-| Event Type                 | Description                                                   |
-| -------------------------- | ------------------------------------------------------------- |
-| `blogFeedUpdate`           | Blog feed changed; payload contains only changed/new entries  |
-| `xFeedNewEntries`          | Newly published X posts, replies, and retweets                |
-| `xFeedUpdate`              | Deprecated alias emitted together with `xFeedNewEntries`      |
-| `scheduleUpdate`           | Weekly schedule was updated                                   |
-| `subathonUpdate`           | Subathon state changed                                        |
-| `subathonGoalUpdate`       | Subathon goal status changed                                  |
-| `streamOnline`             | Stream started                                                |
-| `streamUpdate`             | Stream metadata changed (throttled)                           |
-| `streamOffline`            | Stream ended                                                  |
-| `secretneuroaccountOnline` | secretneuroaccount went live (same payload as `streamOnline`) |
-| `streamRaidIncoming`       | Raid incoming event                                           |
-| `streamRaidOutgoing`       | Raid outgoing event                                           |
+| Event Type                 | Description                                                      |
+| -------------------------- | ---------------------------------------------------------------- |
+| `shopProductsUpdate`       | Shop products changed; payload contains the full current catalog |
+| `blogFeedUpdate`           | Blog feed changed; payload contains only changed/new entries     |
+| `xFeedNewEntries`          | Newly published X posts, replies, and retweets                   |
+| `xFeedUpdate`              | Deprecated alias emitted together with `xFeedNewEntries`         |
+| `scheduleUpdate`           | Weekly schedule was updated                                      |
+| `subathonUpdate`           | Subathon state changed                                           |
+| `subathonGoalUpdate`       | Subathon goal status changed                                     |
+| `streamOnline`             | Stream started                                                   |
+| `streamUpdate`             | Stream metadata changed (throttled)                              |
+| `streamOffline`            | Stream ended                                                     |
+| `secretneuroaccountOnline` | secretneuroaccount went live (same payload as `streamOnline`)    |
+| `streamRaidIncoming`       | Raid incoming event                                              |
+| `streamRaidOutgoing`       | Raid outgoing event                                              |
 
 ## Error Responses
 

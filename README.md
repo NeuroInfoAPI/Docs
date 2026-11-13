@@ -21,6 +21,7 @@ This repository contains documentation for all public API areas:
 - **[Twitch API](twitch.md)** - Stream status and VOD data
 - **[Subathon API](subathon.md)** - Subathon goals and progress
 - **[Blog API](blog.md)** - Neuro-sama blog feed and entry content
+- **[Shop API](shop.md)** - Neuro-sama shop products and optional currency conversion
 - **[X Feed API](x-feed.md)** - Cached X posts, replies, retweets, and media links
 - **[WebSocket API](websocket.md)** - Real-time events and WebSocket authentication
 - **[Prebuild Clients](clients/README.md)** - ready-to-use clients for your project
@@ -46,7 +47,7 @@ This repository contains documentation for all public API areas:
 
 - Real-time event stream via WebSocket
 - Secure browser auth via one-time ticket endpoint
-- Event subscriptions for stream, schedule, subathon, blog, and X feed updates
+- Event subscriptions for stream, schedule, subathon, blog, X feed, and shop updates
 - Automatic reconnect support in the TypeScript client
 
 ### Subathon Tracking
@@ -69,6 +70,13 @@ This repository contains documentation for all public API areas:
 - Structured tweet, reply, and retweet entries
 - Plain-text content and structured media
 - Direct X post and public media URLs
+
+### Shop Products
+
+- Product catalog and lookup by product ID (API token required)
+- Product variants, prices, images, collections, and published metafields
+- Optional currency conversion with fallback to original prices
+- WebSocket updates with the full catalog when products change
 
 ## 📖 Getting Started
 

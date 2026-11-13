@@ -32,6 +32,11 @@
 - **`GET /api/v2/x-feed`** - Get the cached X feed for a supported account
   - Parameters: `user` (required query parameter: `NeurosamaAI`, `EvilNeuroAI`, or `Vedal987`)
 
+## Shop API
+
+- `GET /api/v2/shop/products` - Shop product catalog (optional `currency`)
+- `GET /api/v2/shop/product` - Specific shop product (`id` required, optional `currency`)
+
 ## WebSocket API
 
 - **`GET /api/v2/ws/ticket`** - Get one-time WebSocket ticket

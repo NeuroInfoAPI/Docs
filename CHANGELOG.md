@@ -3,12 +3,22 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [13.11.2026]
+
+### Added
+
+- Added `getShopProducts(currency?)` and `getShopProduct(id, currency?)` to the TS/JS client and regenerated JavaScript/declarations.
+- Added documentation for the authenticated `GET /shop/products` and `GET /shop/product?id=...` endpoints, including product details, availability notes, and optional currency conversion ([shop.md](shop.md)).
+- Added shop endpoint references to the overview, quick reference, and authentication guide, plus the `SH1` and `SH2` errors ([README.md](README.md), [quickInfo.md](quickInfo.md), [needsAuth.md](needsAuth.md), [errors.md](errors.md)).
+- Shop REST responses use `{ data }` without response metadata or a product-level `currency` object. Prices identify their currency with `currencyCode`.
+- Shop data updates every 30 seconds to 2 minutes; successful REST responses use a private 30-second cache.
+
 ## [09.11.2026]
 
 ### Updated
 
 - Updated API domain from `neuro.appstun.net` to `neuroinfoapi.dev`
- 
+
 ## [01.11.2026]
 
 ### Removed
