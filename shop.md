@@ -114,7 +114,7 @@ The response uses the same product properties as the list endpoint. `data` conta
 | --------------------------------------- | -------- | ------------------------------------------------------------- |
 | `id`                                    | string   | Numeric Shopify product ID, kept as a string.                 |
 | `title`, `handle`                       | string   | Product title and storefront handle.                          |
-| `url`                                   | string   | Product URL at `https://neurosama.shop/p/{id}`.               |
+| `url`                                   | string   | Product page link                                             |
 | `description`, `descriptionHtml`        | string   | Plain-text and HTML descriptions.                             |
 | `vendor`, `productType`                 | string   | Vendor name and product category from the storefront.         |
 | `tags`                                  | string[] | Product tags from the storefront.                             |
@@ -169,13 +169,13 @@ Converted prices are estimates; final checkout prices may differ.
 
 ## Error Responses
 
-| Status | Code                  | Description                                                                                                              |
-| ------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `401`  | `AU9`, `AU10`, `AU11` | Missing, malformed, or invalid/expired API token.                                                                        |
+| Status | Code                  | Description                                                                                                                   |
+| ------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `401`  | `AU9`, `AU10`, `AU11` | Missing, malformed, or invalid/expired API token.                                                                             |
 | `400`  | `AP4`                 | Missing/invalid `id`, repeated values for supported query parameters, or `currency` longer than 32 characters after trimming. |
-| `404`  | `SH1`                 | No product found with the given ID.                                                                                      |
-| `503`  | `SH2`                 | Product data is temporarily unavailable; includes `Retry-After: 120`.                                                    |
-| `429`  | `RL3`                 | Shared v2 rate limit exceeded.                                                                                           |
+| `404`  | `SH1`                 | No product found with the given ID.                                                                                           |
+| `503`  | `SH2`                 | Product data is temporarily unavailable; includes `Retry-After: 120`.                                                         |
+| `429`  | `RL3`                 | Shared v2 rate limit exceeded.                                                                                                |
 
 ### No Product (404)
 
