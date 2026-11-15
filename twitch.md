@@ -12,6 +12,10 @@
 
 `GET https://neuroinfoapi.dev/api/v2/twitch/stream`
 
+### Schedule-Linked Streams
+
+`GET https://neuroinfoapi.dev/api/v2/twitch/scheduleLinkedStreams`
+
 ### All VODs
 
 `GET https://neuroinfoapi.dev/api/v2/twitch/vods`
@@ -64,6 +68,62 @@ GET https://neuroinfoapi.dev/api/v2/twitch/stream
     "startedAt": 1273638393734,
     "thumbnailUrl": "https://static-cdn.jtvnw.net/previews-ttv/live_user_vedal987-{width}x{height}.jpg"
   }
+}
+```
+
+### Schedule-Linked Streams
+
+#### Endpoint
+
+`GET https://neuroinfoapi.dev/api/v2/twitch/scheduleLinkedStreams`
+
+#### Description
+
+Lists the Twitch channels that are watched right now because a schedule entry links them, either explicitly (`(on [secretneuroaccount](<https://twitch.tv/secretneuroaccount>)) Evil Stream`, `linkType: "on"`) or as a collab partner (`w/ [Filian](<https://twitch.tv/filian>)`, `linkType: "collab"`). A channel is watched from 3 hours before the scheduled time until its stream has ended. This is a public endpoint with the default anonymous v2 rate limit. Changes are sent as `scheduleLinkedStream*` [WebSocket events](websocket.md#schedule-linked-stream-events).
+
+`status` is `live` or `waiting`. `stream` has the same shape as [Current Stream Status](#current-stream-status). The list is empty when no linked entry is near.
+
+#### Parameters
+
+None
+
+#### Request Example
+
+```http
+GET https://neuroinfoapi.dev/api/v2/twitch/scheduleLinkedStreams
+```
+
+#### Response Format
+
+##### Success Response (200)
+
+```json
+{
+  "data": [
+    {
+      "status": "live",
+      "channel": { "id": "1234567890", "name": "secretneuroaccount", "displayName": "secretneuroaccount" },
+      "linkType": "on",
+      "scheduleEntry": {
+        "day": 3,
+        "time": 1793210400000,
+        "message": "(on [secretneuroaccount](<https://twitch.tv/secretneuroaccount>)) Evil Stream",
+        "type": "normal"
+      },
+      "stream": {
+        "isLive": true,
+        "id": "331913732989",
+        "title": "Evil Stream",
+        "game": { "id": "509658", "name": "Just Chatting" },
+        "language": "en",
+        "tags": ["English", "Vtuber"],
+        "isMature": false,
+        "viewerCount": 5799,
+        "startedAt": 1793210412000,
+        "thumbnailUrl": "https://static-cdn.jtvnw.net/previews-ttv/live_user_secretneuroaccount-{width}x{height}.jpg"
+      }
+    }
+  ]
 }
 ```
 

@@ -186,6 +186,11 @@ export class NeuroInfoApiClient {
          */
         this.getCurrentStream = () => this.request("/twitch/stream");
         /**
+         * Fetches the channels that are watched right now because a schedule entry takes place on them.
+         * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#schedule-linked-streams-1
+         */
+        this.getScheduleLinkedStreams = () => this.request("/twitch/scheduleLinkedStreams");
+        /**
          * Fetches all VODs (Video on Demand).
          * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#all-vods-1
          */
@@ -1201,6 +1206,62 @@ export var Utils;
         return entry.imageUrl !== null && entry.imageUrl.trim() !== "";
     }
     Utils.hasScheduleImage = hasScheduleImage;
+    // ----- Schedule-linked streams -----
+    /** The schedule entry takes place on this channel instead of the main channel, e.g. `(on secretneuroaccount) Evil Stream`. */
+    function isLinkTypeOn(data) {
+        return data.linkType === "on";
+    }
+    Utils.isLinkTypeOn = isLinkTypeOn;
+    /** The channel is linked as a collab partner, e.g. `w/ [Filian](...)`. */
+    function isLinkTypeCollab(data) {
+        return data.linkType === "collab";
+    }
+    Utils.isLinkTypeCollab = isLinkTypeCollab;
+    /** The channel went live while it was watched. */
+    function isTriggerStreamStart(data) {
+        return data.trigger === "streamStart";
+    }
+    Utils.isTriggerStreamStart = isTriggerStreamStart;
+    /** The channel was already live when watching started (e.g. it started early or the server restarted). */
+    function isTriggerFetch(data) {
+        return data.trigger === "fetch";
+    }
+    Utils.isTriggerFetch = isTriggerFetch;
+    /** The scheduled time was reached. Sent once per entry whether the channel is live or not, see {@link isLinkedStreamLive}. */
+    function isTriggerScheduleTime(data) {
+        return data.trigger === "scheduleTime";
+    }
+    Utils.isTriggerScheduleTime = isTriggerScheduleTime;
+    /** The stream ended. */
+    function isReasonStreamEnd(data) {
+        return data.reason === "streamEnd";
+    }
+    Utils.isReasonStreamEnd = isReasonStreamEnd;
+    /** The channel did not go live after the scheduled time (collabs: 15 minutes after the main stream ended, otherwise after 4 hours). */
+    function isReasonNoShow(data) {
+        return data.reason === "noShow";
+    }
+    Utils.isReasonNoShow = isReasonNoShow;
+    /** The schedule entry was removed while the channel was not live. */
+    function isReasonScheduleRemoved(data) {
+        return data.reason === "scheduleRemoved";
+    }
+    Utils.isReasonScheduleRemoved = isReasonScheduleRemoved;
+    /** The channel was still live at the maximum watch time; the stream may continue without further events. */
+    function isReasonTimeout(data) {
+        return data.reason === "timeout";
+    }
+    Utils.isReasonTimeout = isReasonTimeout;
+    /** The linked stream actually happened, i.e. it was live at some point (`streamEnd` or `timeout`). */
+    function didLinkedStreamHappen(data) {
+        return data.reason === "streamEnd" || data.reason === "timeout";
+    }
+    Utils.didLinkedStreamHappen = didLinkedStreamHappen;
+    /** The channel is live. Narrows `stream` to the live data, e.g. for `scheduleTime` events or `getScheduleLinkedStreams()` entries. */
+    function isLinkedStreamLive(data) {
+        return data.stream.isLive;
+    }
+    Utils.isLinkedStreamLive = isLinkedStreamLive;
 })(Utils || (Utils = {}));
 const wsEventTypes = new Set([
     "shopProductsUpdate",
@@ -1214,6 +1275,9 @@ const wsEventTypes = new Set([
     "streamUpdate",
     "streamOffline",
     "secretneuroaccountOnline",
+    "scheduleLinkedStreamOnline",
+    "scheduleLinkedStreamUpdate",
+    "scheduleLinkedStreamOffline",
     "streamRaidIncoming",
     "streamRaidOutgoing",
 ]);

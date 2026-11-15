@@ -66,6 +66,14 @@ _Full docs of endpoint: [twitch.md](twitch.md)_
 - **Parameters**: None
 - **Public**: Yes
 
+### Schedule-Linked Streams
+
+`GET /twitch/scheduleLinkedStreams`
+
+- **Purpose**: Channels watched right now because a schedule entry links them (`on` channel or collab partner)
+- **Parameters**: None
+- **Public**: Yes
+
 ### All VODs
 
 `GET /twitch/vods`
@@ -204,7 +212,7 @@ _Full docs of endpoint: [websocket.md](websocket.md)_
 
 - **Purpose**: Receive real-time stream, schedule, subathon, feed, and shop events
 - **Authentication**: Required (ticket query param or Authorization header)
-- **Event Types**: `shopProductsUpdate`, `blogFeedUpdate`, `xFeedNewEntries`, `xFeedUpdate` (deprecated), `scheduleUpdate`, `subathonUpdate`, `subathonGoalUpdate`, `streamOnline`, `streamUpdate`, `streamOffline`, `secretneuroaccountOnline`, `streamRaidIncoming`, `streamRaidOutgoing`
+- **Event Types**: `shopProductsUpdate`, `blogFeedUpdate`, `xFeedNewEntries`, `xFeedUpdate` (deprecated), `scheduleUpdate`, `subathonUpdate`, `subathonGoalUpdate`, `streamOnline`, `streamUpdate`, `streamOffline`, `secretneuroaccountOnline`, `scheduleLinkedStreamOnline`, `scheduleLinkedStreamUpdate`, `scheduleLinkedStreamOffline`, `streamRaidIncoming`, `streamRaidOutgoing`
 - **Heartbeat Tip**: For custom clients, use lightweight `ping`/`pong` for liveness checks
 - **Example**: `/api/v2/ws?ticket=YOUR_ONE_TIME_TICKET`
 

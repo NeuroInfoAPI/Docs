@@ -3,6 +3,14 @@
 It's definitely time to write a changelog for "important" changes to the docs. <br>
 *<small>Date format: [DD.MM.YYYY]</small>*
 
+## [15.11.2026]
+
+### Added
+
+- Added `scheduleLinkedStreamOnline`, `scheduleLinkedStreamUpdate` and `scheduleLinkedStreamOffline` WebSocket events for Twitch channels linked in schedule entries, e.g. `(on secretneuroaccount) Evil Stream` (`linkType: "on"`) or collab partners (`linkType: "collab"`). The online event has a `trigger` (`streamStart`, `fetch`, or `scheduleTime`, which is always sent at the scheduled time) and the offline event has a `reason` ([websocket.md](websocket.md#schedule-linked-stream-events)).
+- Added the public `GET /twitch/scheduleLinkedStreams` endpoint with the currently watched channels ([twitch.md](twitch.md#schedule-linked-streams), [quickInfo.md](quickInfo.md)).
+- Added `getScheduleLinkedStreams()` and `Utils` helpers for schedule-linked stream payloads to the TS/JS client: `isLinkTypeOn`/`isLinkTypeCollab`, `isTrigger*`, `isReason*`, `didLinkedStreamHappen` and `isLinkedStreamLive` ([client README](clients/TypeScript-JavaScript/README.md)).
+
 ## [13.11.2026]
 
 ### Added

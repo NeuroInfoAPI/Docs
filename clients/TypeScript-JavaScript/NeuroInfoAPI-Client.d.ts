@@ -78,6 +78,11 @@ export declare class NeuroInfoApiClient {
      */
     getCurrentStream: () => Promise<ApiResult<TwitchStreamState>>;
     /**
+     * Fetches the channels that are watched right now because a schedule entry takes place on them.
+     * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#schedule-linked-streams-1
+     */
+    getScheduleLinkedStreams: () => Promise<ApiResult<ScheduleLinkedStreamInfo[]>>;
+    /**
      * Fetches all VODs (Video on Demand).
      * @docs https://github.com/Appstun/NeuroInfoAPI-Docs/blob/master/twitch.md#all-vods-1
      */
@@ -322,6 +327,52 @@ export declare namespace Utils {
     function isScheduleEntryOffline(entry: ScheduleEntry): boolean;
     function isScheduleEntryUnknown(entry: ScheduleEntry): boolean;
     function hasScheduleImage(entry: ScheduleData): boolean;
+    /** The schedule entry takes place on this channel instead of the main channel, e.g. `(on secretneuroaccount) Evil Stream`. */
+    function isLinkTypeOn(data: {
+        linkType: ScheduleLinkType;
+    }): boolean;
+    /** The channel is linked as a collab partner, e.g. `w/ [Filian](...)`. */
+    function isLinkTypeCollab(data: {
+        linkType: ScheduleLinkType;
+    }): boolean;
+    /** The channel went live while it was watched. */
+    function isTriggerStreamStart(data: {
+        trigger: ScheduleLinkedStreamOnlineTrigger;
+    }): boolean;
+    /** The channel was already live when watching started (e.g. it started early or the server restarted). */
+    function isTriggerFetch(data: {
+        trigger: ScheduleLinkedStreamOnlineTrigger;
+    }): boolean;
+    /** The scheduled time was reached. Sent once per entry whether the channel is live or not, see {@link isLinkedStreamLive}. */
+    function isTriggerScheduleTime(data: {
+        trigger: ScheduleLinkedStreamOnlineTrigger;
+    }): boolean;
+    /** The stream ended. */
+    function isReasonStreamEnd(data: {
+        reason: ScheduleLinkedStreamOfflineReason;
+    }): boolean;
+    /** The channel did not go live after the scheduled time (collabs: 15 minutes after the main stream ended, otherwise after 4 hours). */
+    function isReasonNoShow(data: {
+        reason: ScheduleLinkedStreamOfflineReason;
+    }): boolean;
+    /** The schedule entry was removed while the channel was not live. */
+    function isReasonScheduleRemoved(data: {
+        reason: ScheduleLinkedStreamOfflineReason;
+    }): boolean;
+    /** The channel was still live at the maximum watch time; the stream may continue without further events. */
+    function isReasonTimeout(data: {
+        reason: ScheduleLinkedStreamOfflineReason;
+    }): boolean;
+    /** The linked stream actually happened, i.e. it was live at some point (`streamEnd` or `timeout`). */
+    function didLinkedStreamHappen(data: {
+        reason: ScheduleLinkedStreamOfflineReason;
+    }): boolean;
+    /** The channel is live. Narrows `stream` to the live data, e.g. for `scheduleTime` events or `getScheduleLinkedStreams()` entries. */
+    function isLinkedStreamLive<T extends {
+        stream: WsStreamOnlineData | WsStreamOfflineData;
+    }>(data: T): data is T & {
+        stream: WsStreamOnlineData;
+    };
 }
 export interface NeuroInfoApiBaseOptions {
     /** Host and API path without protocol. HTTP(S)/WS(S) protocols are accepted temporarily for compatibility and will be removed in a future major version. Default: `neuroinfoapi.dev/api/v2`. */
@@ -391,6 +442,58 @@ export interface WsStreamOnlineData extends StreamMetadata {
 /** Event data for streamOffline event. */
 export interface WsStreamOfflineData {
     isLive: false;
+}
+/** Twitch channel a schedule entry takes place on. */
+export interface ScheduleLinkedChannel {
+    id: string;
+    name: string;
+    displayName: string;
+}
+/**
+ * How a channel is linked in a schedule entry.
+ * - `on`: the entry explicitly takes place on that channel, e.g. `(on [secretneuroaccount](...)) Evil Stream`
+ * - `collab`: any other Twitch link, usually a collab partner, e.g. `w/ [Filian](...)`
+ */
+export type ScheduleLinkType = "on" | "collab";
+/**
+ * Why `scheduleLinkedStreamOnline` was sent.
+ * - `streamStart`: the channel went live while it was watched
+ * - `fetch`: the channel was already live when watching started
+ * - `scheduleTime`: the scheduled time was reached; always sent once per entry, check `stream.isLive`
+ */
+export type ScheduleLinkedStreamOnlineTrigger = "streamStart" | "scheduleTime" | "fetch";
+/** Why `scheduleLinkedStreamOffline` was sent. */
+export type ScheduleLinkedStreamOfflineReason = "streamEnd" | "noShow" | "scheduleRemoved" | "timeout";
+/** Event data for scheduleLinkedStreamOnline event. */
+export interface WsScheduleLinkedStreamOnlineData {
+    trigger: ScheduleLinkedStreamOnlineTrigger;
+    channel: ScheduleLinkedChannel;
+    linkType: ScheduleLinkType;
+    scheduleEntry: ScheduleEntry;
+    stream: WsStreamOnlineData | WsStreamOfflineData;
+}
+/** Event data for scheduleLinkedStreamUpdate event. */
+export interface WsScheduleLinkedStreamUpdateData {
+    channel: ScheduleLinkedChannel;
+    linkType: ScheduleLinkType;
+    scheduleEntry: ScheduleEntry;
+    stream: StreamMetadata;
+}
+/** Event data for scheduleLinkedStreamOffline event. */
+export interface WsScheduleLinkedStreamOfflineData {
+    reason: ScheduleLinkedStreamOfflineReason;
+    channel: ScheduleLinkedChannel;
+    linkType: ScheduleLinkType;
+    scheduleEntry: ScheduleEntry;
+    stream: WsStreamOfflineData;
+}
+/** Entry of `GET /twitch/scheduleLinkedStreams`. */
+export interface ScheduleLinkedStreamInfo {
+    status: "live" | "waiting";
+    channel: ScheduleLinkedChannel;
+    linkType: ScheduleLinkType;
+    scheduleEntry: ScheduleEntry;
+    stream: WsStreamOnlineData | WsStreamOfflineData;
 }
 /** Event data for raid events. */
 export interface WsStreamRaidData {
@@ -542,6 +645,9 @@ export interface WsEventDataMap {
     streamOffline: WsStreamOfflineData;
     streamUpdate: StreamMetadata;
     secretneuroaccountOnline: WsStreamOnlineData;
+    scheduleLinkedStreamOnline: WsScheduleLinkedStreamOnlineData;
+    scheduleLinkedStreamUpdate: WsScheduleLinkedStreamUpdateData;
+    scheduleLinkedStreamOffline: WsScheduleLinkedStreamOfflineData;
     streamRaidIncoming: WsStreamRaidData;
     streamRaidOutgoing: WsStreamRaidData;
     scheduleUpdate: ScheduleData;

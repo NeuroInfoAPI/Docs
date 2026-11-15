@@ -333,6 +333,102 @@ Sends the full current catalog when products change, including additions and rem
 
 `timestamp` is the event send time in Unix milliseconds. Product timestamps describe changes in the shop. Initial loads, unchanged results, and failed updates do not emit this event. Use REST for the initial catalog and after reconnecting.
 
+##### Schedule-Linked Stream Events
+
+Every Twitch channel linked in a schedule entry (except the main channel `vedal987`) is watched. `linkType` says how it is linked:
+
+| `linkType` | Meaning                                                    | Example                                                                         |
+| ---------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `on`       | The entry explicitly takes place on that channel           | `(on [secretneuroaccount](<https://twitch.tv/secretneuroaccount>)) Evil Stream` |
+| `collab`   | Any other Twitch link, usually a collab partner            | `Geoguessr w/ [Filian](<https://twitch.tv/filian>) & Neuro`                     |
+
+A collab entry with several Twitch links sends separate events for each channel. Only Twitch links count (no YouTube or plain names), and canceled or offline entries are ignored.
+
+A linked channel is watched from 3 hours before the scheduled time until its stream has ended (plus 15 minutes for restarts). If the channel never goes live, watching stops 4 hours after the scheduled time. `collab` links are coupled to the main stream when it is live at or after the scheduled time: a partner that is not live is watched while the main stream runs and until 15 minutes after it ended, and a partner that is still live 6 hours after the main stream ended gets an offline event with reason `timeout`. `on` links are independent of the main channel. `scheduleEntry` is the matching entry of the weekly schedule, and `channel` is the linked Twitch channel (same shape as `channel` in the raid events).
+
+`scheduleLinkedStreamOnline` uses `trigger` to say why it was sent:
+
+| `trigger`      | Sent when                                                                              | `stream`                                         |
+| -------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `streamStart`  | The channel went live while it was watched                                             | Same as `streamOnline`                           |
+| `fetch`        | The channel was already live when watching started (early start or server restart)    | Same as `streamOnline`                           |
+| `scheduleTime` | The scheduled time was reached. Always sent once per entry, whether live or not       | Same as `streamOnline`, or `{ "isLive": false }` |
+
+Use `streamStart`/`fetch` if you care about the actual stream start, or only `scheduleTime` if you want to react when the stream is planned. Collab partners often stream their own content before a collab, so `fetch` can come from an earlier stream; `scheduleTime` is the more reliable signal for collabs.
+
+```json
+{
+  "type": "event",
+  "data": {
+    "eventType": "scheduleLinkedStreamOnline",
+    "eventData": {
+      "trigger": "streamStart",
+      "channel": { "id": "1234567890", "name": "secretneuroaccount", "displayName": "secretneuroaccount" },
+      "linkType": "on",
+      "scheduleEntry": {
+        "day": 3,
+        "time": 1793210400000,
+        "message": "(on [secretneuroaccount](<https://twitch.tv/secretneuroaccount>)) Evil Stream",
+        "type": "normal"
+      },
+      "stream": {
+        "isLive": true,
+        "id": "331913732989",
+        "title": "Evil Stream",
+        "game": { "id": "509658", "name": "Just Chatting" },
+        "language": "en",
+        "tags": ["English", "Vtuber"],
+        "isMature": false,
+        "viewerCount": 5799,
+        "startedAt": 1793210412000,
+        "thumbnailUrl": "https://static-cdn.jtvnw.net/previews-ttv/live_user_secretneuroaccount-{width}x{height}.jpg"
+      }
+    },
+    "timestamp": 1793210415000
+  }
+}
+```
+
+`scheduleLinkedStreamUpdate` has the same `channel`, `linkType` and `scheduleEntry`, and `stream` has the same shape as `streamUpdate`. It is throttled to at most one broadcast every 2 seconds per channel.
+
+```json
+{
+  "eventType": "scheduleLinkedStreamUpdate",
+  "eventData": {
+    "channel": { "id": "1234567890", "name": "secretneuroaccount", "displayName": "secretneuroaccount" },
+    "linkType": "on",
+    "scheduleEntry": { "day": 3, "time": 1793210400000, "message": "(on [secretneuroaccount](<https://twitch.tv/secretneuroaccount>)) Evil Stream", "type": "normal" },
+    "stream": { "title": "Evil Stream (new title)", "game": { "id": "509658", "name": "Just Chatting" }, "language": "en", "isMature": false }
+  }
+}
+```
+
+`scheduleLinkedStreamOffline` has `stream: { "isLive": false }` like `streamOffline`, plus `reason`:
+
+| `reason`          | Sent when                                                                                                  |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| `streamEnd`       | The channel's stream ended                                                                                 |
+| `noShow`          | `scheduleTime` was sent while the channel was offline, and it never went live: within 4 hours, or for `collab` links until 15 minutes after the main stream ended |
+| `scheduleRemoved` | `scheduleTime` was sent while the channel was offline, and the entry was then removed from the schedule  |
+| `timeout`         | The stream was still live at the maximum watch time: 3 days after the scheduled time for `on` links, 24 hours for `collab` links, or for `collab` links 6 hours after the main stream ended. The channel is no longer watched |
+
+If a channel is still live when the watch window of its next entry opens (e.g. a marathon on consecutive days), the running stream continues with the new `scheduleEntry`: no offline event and no new `fetch`, but `scheduleTime` is sent again at the new entry's time.
+
+```json
+{
+  "eventType": "scheduleLinkedStreamOffline",
+  "eventData": {
+    "reason": "streamEnd",
+    "channel": { "id": "1234567890", "name": "secretneuroaccount", "displayName": "secretneuroaccount" },
+    "linkType": "on",
+    "scheduleEntry": { "day": 3, "time": 1793210400000, "message": "(on [secretneuroaccount](<https://twitch.tv/secretneuroaccount>)) Evil Stream", "type": "normal" },
+    "stream": { "isLive": false }
+  }
+}
+```
+
+After the last online event of an entry, exactly one offline event follows (online events can repeat, e.g. `fetch` and then `scheduleTime`). The current state is available via [`GET /api/v2/twitch/scheduleLinkedStreams`](twitch.md#schedule-linked-streams).
+
 ##### Subscription Responses
 
 ```json
@@ -372,6 +468,9 @@ Sends the full current catalog when products change, including additions and rem
       "streamUpdate",
       "streamOffline",
       "secretneuroaccountOnline",
+      "scheduleLinkedStreamOnline",
+      "scheduleLinkedStreamUpdate",
+      "scheduleLinkedStreamOffline",
       "streamRaidIncoming",
       "streamRaidOutgoing"
     ]
@@ -401,6 +500,9 @@ Sends the full current catalog when products change, including additions and rem
 | `streamUpdate`             | Stream metadata changed (throttled)                              |
 | `streamOffline`            | Stream ended                                                     |
 | `secretneuroaccountOnline` | secretneuroaccount went live (same payload as `streamOnline`)    |
+| `scheduleLinkedStreamOnline`  | A channel linked in the schedule started or its time came (see `trigger`) |
+| `scheduleLinkedStreamUpdate`  | Metadata of a schedule-linked stream changed (throttled)      |
+| `scheduleLinkedStreamOffline` | A schedule-linked stream ended (see `reason`)                 |
 | `streamRaidIncoming`       | Raid incoming event                                              |
 | `streamRaidOutgoing`       | Raid outgoing event                                              |
 
@@ -491,6 +593,7 @@ The following values are retained in the protocol types for legacy compatibility
 - Maximum 5 active WebSocket connections per user; unlimited tokens have a separate limit of 20
 - The server accepts at most 20 WebSocket connection attempts per IP in 10 seconds and has a total capacity of 1500 active connections
 - `streamUpdate` events are throttled to at most one broadcast every 2 seconds
+- `scheduleLinkedStreamUpdate` events are throttled to at most one broadcast every 2 seconds per channel
 - `blogFeedUpdate` broadcasts only changed or newly added entries
 - `xFeedNewEntries` broadcasts only entries newer than the newest previously seen entry for each supported X account
 - `xFeedUpdate` is a deprecated compatibility alias emitted with the same payload

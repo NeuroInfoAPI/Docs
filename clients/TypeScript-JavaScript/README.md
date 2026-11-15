@@ -258,6 +258,9 @@ await wsClient.connect();
 | `streamOffline`            | Stream went offline                                              |
 | `streamUpdate`             | Stream metadata changed                                          |
 | `secretneuroaccountOnline` | Special alert: secretneuroaccount is live                        |
+| `scheduleLinkedStreamOnline`  | A channel linked in the schedule went live or its time came  |
+| `scheduleLinkedStreamUpdate`  | Metadata of a schedule-linked stream changed                 |
+| `scheduleLinkedStreamOffline` | A schedule-linked stream ended (see `reason`)                |
 | `streamRaidIncoming`       | Incoming raid event                                              |
 | `streamRaidOutgoing`       | Outgoing raid event                                              |
 | `shopProductsUpdate`       | Shop products changed; includes the full current catalog         |
@@ -268,7 +271,22 @@ await wsClient.connect();
 | `subathonUpdate`           | Subathon state changed                                           |
 | `subathonGoalUpdate`       | Subathon goal changed                                            |
 
-`secretneuroaccountOnline` sends the same payload shape as `streamOnline`, but it is emitted specifically when the Twitch account `secretneuroaccount` goes live. This is the only event for this account.
+`secretneuroaccountOnline` sends the same payload shape as `streamOnline`, but it is emitted specifically when the Twitch account `secretneuroaccount` goes live.
+
+The `scheduleLinkedStream*` events cover Twitch channels linked in schedule entries, e.g. `(on secretneuroaccount) Evil Stream` (`linkType: "on"`) or collab partners (`linkType: "collab"`). Their payloads contain `channel`, `linkType`, `scheduleEntry` and `stream`; see the [WebSocket docs](../../websocket.md#schedule-linked-stream-events). `client.getScheduleLinkedStreams()` returns the channels watched right now.
+
+`Utils` also has helpers for these payloads: `isLinkTypeOn`/`isLinkTypeCollab`, `isTriggerStreamStart`/`isTriggerFetch`/`isTriggerScheduleTime`, `isReasonStreamEnd`/`isReasonNoShow`/`isReasonScheduleRemoved`/`isReasonTimeout`, `didLinkedStreamHappen` (`streamEnd` or `timeout`) and `isLinkedStreamLive`, which also narrows `stream` to the live data.
+
+```typescript
+wsClient.on("scheduleLinkedStreamOnline", (data) => {
+  if (Utils.isTriggerScheduleTime(data) && !Utils.isLinkedStreamLive(data)) return; // scheduled time reached, but not live yet
+  if (Utils.isLinkedStreamLive(data)) console.log(`${data.channel.displayName} is live: ${data.stream.title}`);
+});
+
+wsClient.on("scheduleLinkedStreamOffline", (data) => {
+  if (Utils.isReasonNoShow(data)) console.log(`${data.channel.displayName} did not stream`);
+});
+```
 
 > [!NOTE]
 > By default, the WebSocket client uses ticket-based authentication (`GET /api/v2/ws/ticket`) before connecting. This avoids putting API tokens into URL query parameters.
