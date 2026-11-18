@@ -40,6 +40,29 @@ Access Twitch stream data and VOD information. Stream data is publicly available
 
 Get current Twitch stream information. This is a public endpoint with the default anonymous v2 rate limit.
 
+The response always contains the channel and its current settings. Stream-specific fields are only included while the channel is live.
+
+| Field                                            | Live | Offline | Description                                                                                 |
+| ------------------------------------------------ | :--: | :-----: | ------------------------------------------------------------------------------------------- |
+| `isLive`                                         |  ✅  |   ✅    | Whether the channel is currently live                                                       |
+| `channel`                                        |  ✅  |   ✅    | Main channel identity (see [Channel Object](#channel-object)), or `null`                    |
+| `title`, `game`, `language`, `tags`, `isMature`  |  ✅  |   ✅    | Current channel settings, also updated while offline; `null` until fetched for the first time |
+| `id`, `viewerCount`, `startedAt`, `thumbnailUrl` |  ✅  |   ❌    | Live stream data; omitted while offline                                                     |
+
+`isMature` is `true` if any content classification labels are set, the same as in channel updates.
+
+##### Channel Object
+
+| Field             | Type             | Description                    |
+| ----------------- | ---------------- | ------------------------------ |
+| `id`              | `string`         | Twitch user ID                 |
+| `name`            | `string`         | Login name                     |
+| `displayName`     | `string`         | Display name                   |
+| `profileImageUrl` | `string \| null` | Twitch avatar URL, if available |
+
+> [!NOTE]
+> `channel` is `null` until the first successful user lookup. User information is refreshed every 5 minutes. If a refresh of the user information or channel settings fails, the last known values are kept.
+
 #### Parameters
 
 None
@@ -52,12 +75,18 @@ GET https://neuroinfoapi.dev/api/v2/twitch/stream
 
 #### Response Format
 
-##### Success Response (200)
+##### Success Response (200, live)
 
 ```json
 {
   "data": {
     "isLive": true,
+    "channel": {
+      "id": "123456789",
+      "name": "vedal987",
+      "displayName": "Vedal987",
+      "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/example-profile_image-300x300.png"
+    },
     "id": "331913732989",
     "title": "NEUROSLOP EVIL WASN'T BASED ENOUGH TO DO IT",
     "game": { "id": "509658", "name": "Just Chatting" },
@@ -67,6 +96,27 @@ GET https://neuroinfoapi.dev/api/v2/twitch/stream
     "viewerCount": 5799,
     "startedAt": 1273638393734,
     "thumbnailUrl": "https://static-cdn.jtvnw.net/previews-ttv/live_user_vedal987-{width}x{height}.jpg"
+  }
+}
+```
+
+##### Success Response (200, offline)
+
+```json
+{
+  "data": {
+    "isLive": false,
+    "channel": {
+      "id": "123456789",
+      "name": "vedal987",
+      "displayName": "Vedal987",
+      "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/example-profile_image-300x300.png"
+    },
+    "title": "Next stream title",
+    "game": { "id": "509658", "name": "Just Chatting" },
+    "language": "en",
+    "tags": ["English", "Vtuber"],
+    "isMature": false
   }
 }
 ```
@@ -81,7 +131,17 @@ GET https://neuroinfoapi.dev/api/v2/twitch/stream
 
 Lists the Twitch channels that are watched right now because a schedule entry links them, either explicitly (`(on [secretneuroaccount](<https://twitch.tv/secretneuroaccount>)) Evil Stream`, `linkType: "on"`) or as a collab partner (`w/ [Filian](<https://twitch.tv/filian>)`, `linkType: "collab"`). A channel is watched from 3 hours before the scheduled time until its stream has ended. This is a public endpoint with the default anonymous v2 rate limit. Changes are sent as `scheduleLinkedStream*` [WebSocket events](websocket.md#schedule-linked-stream-events).
 
-`status` is `live` or `waiting`. `stream` has the same shape as [Current Stream Status](#current-stream-status). The list is empty when no linked entry is near.
+Each entry contains:
+
+| Field           | Description                                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| `status`        | `live` or `waiting`                                                                                          |
+| `channel`       | Identity of the linked channel                                                                               |
+| `linkType`      | `on` or `collab`                                                                                             |
+| `scheduleEntry` | The schedule entry that links the channel                                                                    |
+| `stream`        | Live stream fields from [Current Stream Status](#current-stream-status), or `{ "isLive": false }` while waiting |
+
+The list is empty when no linked entry is near.
 
 #### Parameters
 

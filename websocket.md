@@ -333,6 +333,69 @@ Sends the full current catalog when products change, including additions and rem
 
 `timestamp` is the event send time in Unix milliseconds. Product timestamps describe changes in the shop. Initial loads, unchanged results, and failed updates do not emit this event. Use REST for the initial catalog and after reconnecting.
 
+##### Twitch Stream Events
+
+`streamOnline`, `streamUpdate` and `streamOffline` describe the main channel and contain the same data as [`GET /api/v2/twitch/stream`](twitch.md#current-stream-status), including `channel`:
+
+```json
+{
+  "type": "event",
+  "data": {
+    "eventType": "streamOffline",
+    "timestamp": 1795000000000,
+    "eventData": {
+      "isLive": false,
+      "channel": {
+        "id": "123456789",
+        "name": "vedal987",
+        "displayName": "Vedal987",
+        "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/example-profile_image-300x300.png"
+      }
+    }
+  }
+}
+```
+
+`secretneuroaccountOnline` has the same payload as `streamOnline`, but `channel` describes the secret account.
+
+| Field                     | Type             | Description                     |
+| ------------------------- | ---------------- | ------------------------------- |
+| `channel.id`              | `string`         | Twitch user ID                  |
+| `channel.name`            | `string`         | Login name                      |
+| `channel.displayName`     | `string`         | Display name                    |
+| `channel.profileImageUrl` | `string \| null` | Twitch avatar URL, if available |
+
+> [!NOTE]
+> - **Main channel:** `channel` is `null` until the first successful user lookup. User information is refreshed every 5 minutes; if a refresh fails, the last known values are kept.
+> - **Secret account:** The identity comes from the online event itself and the avatar is fetched when the event arrives. If that fails, the event is still sent with `profileImageUrl: null`.
+
+Schedule-linked streams keep their channel identity in the outer `channel` field (see [below](#schedule-linked-stream-events)).
+
+##### Raid Events
+
+`streamRaidOutgoing` and `streamRaidIncoming` contain the target or source channel, including its avatar, and the number of viewers:
+
+```json
+{
+  "type": "event",
+  "data": {
+    "eventType": "streamRaidOutgoing",
+    "timestamp": 1795000000000,
+    "eventData": {
+      "channel": {
+        "id": "123456789",
+        "name": "example",
+        "displayName": "Example",
+        "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/example-profile_image-300x300.png"
+      },
+      "viewerCount": 100
+    }
+  }
+}
+```
+
+If the avatar lookup fails, `profileImageUrl` is `null` and the raid event is still sent.
+
 ##### Schedule-Linked Stream Events
 
 Every Twitch channel linked in a schedule entry (except the main channel `vedal987`) is watched. `linkType` says how it is linked:
