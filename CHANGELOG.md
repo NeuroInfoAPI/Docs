@@ -10,6 +10,7 @@ It's definitely time to write a changelog for "important" changes to the docs. <
 - Added `channel` (`id`, `name`, `displayName`, `profileImageUrl`) to `GET /twitch/stream`, both live and offline ([twitch.md](twitch.md#current-stream-status)).
 - Added `channel` to the `streamOnline`, `streamUpdate`, `streamOffline` and `secretneuroaccountOnline` WebSocket events ([websocket.md](websocket.md#twitch-stream-events)).
 - Added `channel.profileImageUrl` to the `streamRaidIncoming` and `streamRaidOutgoing` WebSocket events ([websocket.md](websocket.md#raid-events)).
+- Added the `TwitchChannel` and `TwitchOfflineStreamData` types to the TS/JS client and updated the stream and raid event types.
 
 ### Changed
 

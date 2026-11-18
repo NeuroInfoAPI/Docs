@@ -420,6 +420,12 @@ export interface WsSystemEventCallbacks {
 export type WsSystemEvent = keyof WsSystemEventCallbacks;
 export type WsSystemEventCallback<T extends WsSystemEvent> = WsSystemEventCallbacks[T];
 export type WsInvalidReason = "malformed" | "unauthenticated" | "missingEventtype" | "invalidEventtype" | "missingToken" | "invalidToken" | "authError";
+export interface TwitchChannel {
+    id: string;
+    name: string;
+    displayName: string;
+    profileImageUrl: string | null;
+}
 export interface StreamGame {
     id: string;
     name: string;
@@ -501,6 +507,7 @@ export interface WsStreamRaidData {
         displayName: string;
         name: string;
         id: string;
+        profileImageUrl: string | null;
     };
     viewerCount: number;
 }
@@ -641,10 +648,18 @@ export interface WsEventDataMap {
     xFeedNewEntries: XFeedNewEntriesData;
     /** @deprecated Subscribe to xFeedNewEntries instead. */
     xFeedUpdate: XFeedUpdateData;
-    streamOnline: WsStreamOnlineData;
-    streamOffline: WsStreamOfflineData;
-    streamUpdate: StreamMetadata;
-    secretneuroaccountOnline: WsStreamOnlineData;
+    streamOnline: WsStreamOnlineData & {
+        channel: TwitchChannel | null;
+    };
+    streamOffline: WsStreamOfflineData & {
+        channel: TwitchChannel | null;
+    };
+    streamUpdate: StreamMetadata & {
+        channel: TwitchChannel | null;
+    };
+    secretneuroaccountOnline: WsStreamOnlineData & {
+        channel: TwitchChannel | null;
+    };
     scheduleLinkedStreamOnline: WsScheduleLinkedStreamOnlineData;
     scheduleLinkedStreamUpdate: WsScheduleLinkedStreamUpdateData;
     scheduleLinkedStreamOffline: WsScheduleLinkedStreamOfflineData;
@@ -699,16 +714,30 @@ type WsClientSettings = {
     connectTimeoutMs: number;
 };
 /** Base stream shape kept for backwards-compatible access to live-only optional fields. */
-export interface TwitchStreamData extends Partial<StreamMetadata> {
+export interface TwitchStreamData {
+    title?: string | null;
+    game?: StreamGame | null;
+    language?: string | null;
+    isMature?: boolean | null;
     isLive: boolean;
     id?: string;
-    tags?: string[];
+    tags?: string[] | null;
     viewerCount?: number;
     startedAt?: number;
     thumbnailUrl?: string;
 }
 /** Current stream state. `isLive` narrows all live-only fields to required values. */
-export type TwitchStreamState = TwitchStreamData & (WsStreamOnlineData | WsStreamOfflineData);
+export interface TwitchOfflineStreamData {
+    isLive: false;
+    title: string | null;
+    game: StreamGame | null;
+    language: string | null;
+    tags: string[] | null;
+    isMature: boolean | null;
+}
+export type TwitchStreamState = TwitchStreamData & (WsStreamOnlineData | TwitchOfflineStreamData) & {
+    channel: TwitchChannel | null;
+};
 export interface TwitchVod {
     id: string;
     streamId: string;
